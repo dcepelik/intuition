@@ -3,6 +3,28 @@
 from math import inf
 from enum import Enum
 
+class MockScreen():
+    def __init__(self, nrows, ncols):
+        self.nrows = nrows
+        self.ncols = ncols
+        self.rows = None
+        self.clear()
+
+    def clear(self):
+        self.rows = [''] * self.nrows
+
+    def put(self, y, x, text):
+        if y < 0 or y >= self.nrows or x < 0 or x >= self.ncols:
+            raise RuntimeError('attempted to put a string off the screen')
+        self.rows[y] = self.rows[y][0:x].ljust(x) + text + self.rows[y][x:]
+
+    @property
+    def content(self):
+        return '\n'.join(self.rows) + '\n'
+
+    def __repr__(self):
+        return self.content
+
 class HAlign(Enum):
     LEFT = 1
     CENTER = 2
@@ -26,27 +48,68 @@ class Cell:
         self.width = None
         self.height = None
 
-class Text:
+class Widget:
+    def transpose(self):
+        return TransposedWidget(self)
+
+def swap_axes(yx):
+    y, x = yx
+    return (x, y)
+
+# TODO Rename `Transposed' stuff to something else like XYWidget
+class TransposedWidget(Widget):
+    def __init__(self, widget):
+        self.widget = widget
+
+    def transpose(self):
+        return self.widget
+
+    @property
+    def size(self):
+        return swap_axes(self.widget.size)
+
+    def render(self, screen, y, x, i, j, rows, cols):
+        return swap_axes(self.widget.render(screen, x, y, j, i, cols, rows))
+
+class TransposeWidgetMixin:
+    @property
+    def children(self):
+        for child in self._children:
+            yield child.transpose()
+
+    def render(self, screen, y, x, i, j, rows, cols):
+        return swap_axes(super().render(screen, x, y, j, i, cols, rows))
+
+    @property
+    def size(self):
+        return swap_axes(super().size)
+
+class Text(Widget):
     def __init__(self, text):
         self.text = text
 
     @property
-    def natural_size(self):
+    def size(self):
         return (1, len(self.text)) if self.text else (0, 0)
 
-    def size_when_rendered(self, i, j, rows, cols):
-        # if i > 0 or rows == 0, this line of text is invisible
-        cols = 0 if i > 0 or rows == 0 else min(len(self.text[j:]), cols)
-        # if there's no widht, there's no height
-        rows = 1 if cols > 0 else 0
+    def render(self, screen, y, x, i, j, rows, cols):
+        end = j + cols
+        text = '' if i > 0 or rows == 0 else self.text[j:end]
+        screen.put(y, x, text)
+        cols = len(text)
+        rows = 1 if cols else 0
         return (rows, cols)
 
 class Container:
     def __init__(self, children = []):
-        self.children = children
+        self._children = children
+
+    @property
+    def children(self):
+        return self._children
 
     def add_child(self, child):
-        self.children.append(child)
+        self._children.append(child)
 
 class Layout(Container):
     def __init__(self):
@@ -89,85 +152,43 @@ Renders widgets horizontally from left to right, possibly using layout informati
 from a HLayout parent.
 '''
 class HContainer(Container):
-    def widgets_in_area(self, i, j, rows, cols):
+    def render(self, screen, y, x, i, j, rows, cols):
         children = iter(self.children)
-
-        first_visible_idx = 0
         for child in children:
-            child_rows, child_cols = child.natural_size
+            child_rows, child_cols = child.size
             if child_cols > j:
                 children = itertools.chain([child], children)
                 break
-            j -= child_cols
+            j -= child_cols # TODO don't override `j'
             assert j >= 0
-            first_visible_idx += 1
-        offset_first_cols = j
 
-        last_visible_idx = first_visible_idx
         max_rows = 0
         total_cols = 0
         for child in children:
-            child_rows, child_cols = child.size_when_rendered(i, j, rows, cols - total_cols)
+            child_rows, child_cols = child.render(screen, y, x, i, j, rows, cols - total_cols)
             j = 0
+            x += child_cols
             total_cols += child_cols
             max_rows = max(max_rows, child_rows)
             if total_cols >= cols:
                 break
-            last_visible_idx += 1
 
-        return (first_visible_idx, last_visible_idx, i, offset_first_cols, max_rows, total_cols)
-
-    def size_when_rendered(self, i, j, rows, cols):
-        _, _, _, _, rows, cols = self.widgets_in_area(i, j, rows, cols)
-        return (rows, cols)
+        return (max_rows, total_cols)
 
     @property
-    def natural_size(self):
+    def size(self):
         total_cols = 0
         max_rows = 0
         for child in self.children:
-            child_rows, child_cols = child.natural_size
+            child_rows, child_cols = child.size
             total_cols += child_cols
             max_rows = max(max_rows, child_rows)
         return (max_rows, total_cols)
-
-class RotatedWidget:
-    def __init__(self, widget):
-        self.widget = widget
-
-    def size_when_rendered(self, i, j, rows, cols):
-        widget_rows, widget_cols = self.widget.size_when_rendered(j, i, cols, rows)
-        return (widget_cols, widget_rows)
-
-    @property
-    def natural_size(self):
-        rows, cols = self.widget.natural_size
-        return (cols, rows)
 
 '''
 Renders widgets vertically from top to bottom, possibly using layout information
 from a VLayout parent.
 '''
-class VContainer(Container):
-    def rotated_children(self):
-        for child in self.children:
-            yield RotatedWidget(child)
+class VContainer(TransposeWidgetMixin, HContainer):
+    pass
 
-    def widgets_in_area(self, i, j, rows, cols):
-        hcont = HContainer(self.rotated_children())
-        (first_visible_idx,
-            last_visible_idx,
-            offset_rows,
-            offset_cols,
-            max_rows,
-            total_cols) = hcont.widgets_in_area(j, i, cols, rows)
-        return (first_visible_idx, last_visible_idx, offset_cols, offset_rows, total_cols, max_rows)
-
-    def size_when_rendered(self, i, j, rows, cols):
-        _, _, _, _, rows, cols = self.widgets_in_area(i, j, rows, cols)
-        return (rows, cols)
-
-    @property
-    def natural_size(self):
-        rows, cols = HContainer(self.rotated_children()).natural_size
-        return (cols, rows)

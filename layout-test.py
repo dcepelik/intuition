@@ -1,77 +1,110 @@
 import unittest
 from layout import *
 
-class TextTest(unittest.TestCase):
-    def test_natural_size(self):
-        self.assertEqual(Text('').natural_size, (0, 0))
-        self.assertEqual(Text('hello').natural_size, (1, 5))
+class SoupUITestCase(unittest.TestCase):
+    def assertScreenContent(self, screen, rows):
+        num_missing = screen.nrows - len(rows)
+        if num_missing > 0:
+            rows += [''] * num_missing
+        self.assertEqual(rows, screen.rows)
+        screen.clear()
+
+class TextTest(SoupUITestCase):
+    def test_size(self):
+        self.assertEqual(Text('').size, (0, 0))
+        self.assertEqual(Text('hello').size, (1, 5))
     
-    def test_size_when_rendered(self):
+    def test_render(self):
         text = Text('hello')
+        screen = MockScreen(1, 10)
 
-        # everything
-        self.assertEqual(text.size_when_rendered(0, 0, 1, 5), (1, 5))
-        # `ell'
-        self.assertEqual(text.size_when_rendered(0, 1, 1, 3), (1, 3))
-        # nothing (cols == 0)
-        self.assertEqual(text.size_when_rendered(0, 2, 1, 0), (0, 0))
-        # nothing (cols == 0)
-        self.assertEqual(text.size_when_rendered(0, 0, 1, 0), (0, 0))
-        # nothing (rows == 0)
-        self.assertEqual(text.size_when_rendered(0, 0, 0, 100), (0, 0))
-        # nothing (first line skipped)
-        self.assertEqual(text.size_when_rendered(1, 0, 1, 100), (0, 0))
-        # nothing (too many columns skipped)
-        self.assertEqual(text.size_when_rendered(0, 10, 1, 100), (0, 0))
+        self.assertEqual(text.render(screen, 0, 0, 0, 0, 1, 10), (1, 5))
+        self.assertScreenContent(screen, ['hello'])
 
-class HContainerTest(unittest.TestCase):
-    def test_widgets_in_area(self):
+        self.assertEqual(text.render(screen, 0, 0, 0, 0, 0, 10), (0, 0))
+        self.assertScreenContent(screen, [''])
+
+        self.assertEqual(text.render(screen, 0, 0, 0, 4, 1, 1), (1, 1))
+        self.assertScreenContent(screen, ['o'])
+
+class FixedSizeWidget(Widget):
+    @property
+    def size(self):
+        return (2, 4)
+
+    def render(self):
+        return self.size
+
+class TransposedWidgetTest(SoupUITestCase):
+    def test_size(self):
+        fixed = FixedSizeWidget()
+        transposed = TransposedWidget(fixed)
+        self.assertEqual(transposed.size, (4, 2))
+
+class HContainerTest(SoupUITestCase):
+    def test_size(self):
+        self.assertEqual(HContainer([]).size, (0, 0))
+        self.assertEqual(HContainer([Text('lorem'), Text('ipsum')]).size, (1, 10))
+        self.assertEqual(HContainer([Text(''), Text('hello')]).size, (1, 5))
+        self.assertEqual(HContainer([Text(''), Text('')]).size, (0, 0))
+
+    def test_renders_basic_hcont(self):
+        screen = MockScreen(1, 10)
+        self.assertEqual(HContainer([]).render(screen, 0, 0, 0, 0, 100, 100), (0, 0))
+        self.assertScreenContent(screen, [''])
+
+        self.assertEqual(HContainer([Text('hello')]).render(screen, 0, 0, 0, 0, 100, 100), (1, 5))
+        self.assertScreenContent(screen, ['hello'])
+
+    def test_renders_partial_hcont(self):
+        screen = MockScreen(5, 16)
         hcont = HContainer([
-            Text('first'),
-            Text('second'),
-            Text('third')
+            Text('skipped'),
+            Text('hello'),
+            Text('world'),
+            Text('not rendered')
         ])
 
-        # everything
-        self.assertEqual(hcont.widgets_in_area(0, 0, 1, 100), (0, 3, 0, 0, 1, 16))
-        # `f' in `first'
-        self.assertEqual(hcont.widgets_in_area(0, 0, 1, 1), (0, 0, 0, 0, 1, 1))
-        # nothing (first row skipped)
-        self.assertEqual(hcont.widgets_in_area(1, 0, 1, 100), (0, 3, 1, 0, 0, 0))
-        # nothing (rows == cols == 0)
-        self.assertEqual(hcont.widgets_in_area(0, 0, 0, 0), (0, 0, 0, 0, 0, 0))
-        # `s' in `second'
-        self.assertEqual(hcont.widgets_in_area(0, 5, 1, 1), (1, 1, 0, 0, 1, 1))
-        # `e' in `second'
-        self.assertEqual(hcont.widgets_in_area(0, 6, 1, 1), (1, 1, 0, 1, 1, 1))
-        # `t' in `third'
-        self.assertEqual(hcont.widgets_in_area(0, 11, 1, 1), (2, 2, 0, 0, 1, 1))
-        # `d' in `third'
-        self.assertEqual(hcont.widgets_in_area(0, 15, 1, 100), (2, 3, 0, 4, 1, 1))
+        self.assertEqual(hcont.render(screen, 0, 0, 0, 8, 1, 5), (1, 5))
+        self.assertScreenContent(screen, ['ellow'])
 
-    def test_natural_size(self):
-        self.assertEqual(HContainer([]).natural_size, (0, 0))
-        self.assertEqual(HContainer([Text('lorem'), Text('ipsum')]).natural_size, (1, 10))
-        self.assertEqual(HContainer([Text(''), Text('hello')]).natural_size, (1, 5))
-        self.assertEqual(HContainer([Text(''), Text('')]).natural_size, (0, 0))
+        self.assertEqual(hcont.render(screen, 0, 0, 0, 0, 1, 1), (1, 1))
+        self.assertScreenContent(screen, ['s'])
 
-class VContainerTest(unittest.TestCase):
-    def test_widgets_in_area(self):
-        self.assertEqual(VContainer([Text('hello')]).natural_size, (1, 5))
-        self.assertEqual(VContainer([Text('hello'), Text('you')]).natural_size, (2, 5))
-        self.assertEqual(VContainer([Text('improve'), Text('your')]).natural_size, (2, 7))
-        self.assertEqual(VContainer([]).natural_size, (0, 0))
-        self.assertEqual(VContainer([Text('i')]).natural_size, (1, 1))
-        self.assertEqual(VContainer([Text(''), Text('i')]).natural_size, (1, 1))
+        self.assertEqual(hcont.render(screen, 1, 1, 0, 1, 1, 10), (1, 10))
+        self.assertScreenContent(screen, ['', ' kippedhell'])
 
-    def test_widgets_in_area(self):
-        vcont = self.assertEqual(VContainer([]).widgets_in_area(0, 0, 100, 100), (0, 0, 0, 0, 0, 0))
+        self.assertEqual(HContainer([Text('hello')]).render(screen, 0, 0, 1, 0, 10, 10), (0, 0))
+        self.assertScreenContent(screen, [])
+
+class VContainerTest(SoupUITestCase):
+    def test_size(self):
+        self.assertEqual(VContainer([Text('')]).size, (0, 0))
+        self.assertEqual(VContainer([Text('hello')]).size, (1, 5))
+        vcont = VContainer([
+            Text('hello world'),
+            Text('this is'),
+            Text('soupui')
+        ])
+        self.assertEqual(vcont.size, (3, 11))
+
+    def test_render(self):
+        screen = MockScreen(10, 10)
+
+        self.assertEqual(VContainer([Text('hello')]).render(screen, 0, 0, 0, 0, 1, 5), (1, 5))
+        self.assertScreenContent(screen, ['hello'])
+
+        self.assertEqual(VContainer([Text('hello'), Text('world')]).render(screen, 0, 0, 0, 0, 10, 5), (2, 5))
+        self.assertScreenContent(screen, ['hello', 'world'])
+
         vcont = VContainer([
             Text('a'),
-            Text('little'),
-            Text('of'),
-            Text('text')
+            Text('bbbbbb'),
+            Text('ccc'),
+            Text('ddddd')
         ])
-        self.assertEqual(vcont.widgets_in_area(0, 0, 100, 100), (0, 4, 0, 0, 4, 6))
-        self.assertEqual(vcont.widgets_in_area(0, 1, 100, 100), (0, 4, 0, 1, 3, 5))
+        self.assertEqual(vcont.render(screen, 0, 0, 0, 1, 4, 10), (3, 5))
+        self.assertScreenContent(screen, ['bbbbb', 'cc', 'dddd'])
 
+        self.assertEqual(vcont.render(screen, 0, 0, 0, 3, 4, 10), (2, 3))
+        self.assertScreenContent(screen, ['bbb', 'dd'])
