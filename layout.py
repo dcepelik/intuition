@@ -82,45 +82,44 @@ class VLayout(Layout):
             raise ValueError('child of VLayout must be instance of VContainer')
         super().add_child(child)
 
+import itertools
+
 '''
 Renders widgets horizontally from left to right, possibly using layout information
 from a HLayout parent.
 '''
 class HContainer(Container):
     def widgets_in_area(self, i, j, rows, cols):
-        # determine first_visible_idx
+        children = iter(self.children)
+
         first_visible_idx = 0
-        for idx, child in enumerate(self.children):
+        for child in children:
             child_rows, child_cols = child.natural_size
             if child_cols > j:
-                # (part of) this widget will be rendered
+                children = itertools.chain([child], children)
                 break
             j -= child_cols
-            assert i >= 0
+            assert j >= 0
             first_visible_idx += 1
-
         offset_first_cols = j
 
-        # determine last_visible_idx
+        last_visible_idx = first_visible_idx
         max_rows = 0
         total_cols = 0
-        last_visible_idx = first_visible_idx
-        for idx, child in enumerate(self.children[first_visible_idx:]):
+        for child in children:
             child_rows, child_cols = child.size_when_rendered(i, j, rows, cols - total_cols)
             j = 0
             total_cols += child_cols
             max_rows = max(max_rows, child_rows)
             if total_cols >= cols:
-                # this is the last visible widget
                 break
             last_visible_idx += 1
 
-        last_visible_idx = min(last_visible_idx, len(self.children) - 1)
         return (first_visible_idx, last_visible_idx, i, offset_first_cols, max_rows, total_cols)
 
     def size_when_rendered(self, i, j, rows, cols):
-        _, _, _, _, max_rows, total_cols = self.widgets_in_area(i, j, rows, cols)
-        return (max_rows, total_cols)
+        _, _, _, _, rows, cols = self.widgets_in_area(i, j, rows, cols)
+        return (rows, cols)
 
     @property
     def natural_size(self):
@@ -132,31 +131,43 @@ class HContainer(Container):
             max_rows = max(max_rows, child_rows)
         return (max_rows, total_cols)
 
+class RotatedWidget:
+    def __init__(self, widget):
+        self.widget = widget
+
+    def size_when_rendered(self, i, j, rows, cols):
+        widget_rows, widget_cols = self.widget.size_when_rendered(j, i, cols, rows)
+        return (widget_cols, widget_rows)
+
+    @property
+    def natural_size(self):
+        rows, cols = self.widget.natural_size
+        return (cols, rows)
+
 '''
 Renders widgets vertically from top to bottom, possibly using layout information
 from a VLayout parent.
 '''
 class VContainer(Container):
-    pass
+    def rotated_children(self):
+        for child in self.children:
+            yield RotatedWidget(child)
 
-vlayout = VLayout()
-vlayout.add_cell(Cell())
-vlayout.add_cell(Cell())
+    def widgets_in_area(self, i, j, rows, cols):
+        hcont = HContainer(self.rotated_children())
+        (first_visible_idx,
+            last_visible_idx,
+            offset_rows,
+            offset_cols,
+            max_rows,
+            total_cols) = hcont.widgets_in_area(j, i, cols, rows)
+        return (first_visible_idx, last_visible_idx, offset_cols, offset_rows, total_cols, max_rows)
 
-first_column = VContainer([
-    Text("Hello"),
-    Text("World")
-])
+    def size_when_rendered(self, i, j, rows, cols):
+        _, _, _, _, rows, cols = self.widgets_in_area(i, j, rows, cols)
+        return (rows, cols)
 
-second_column = VContainer([
-    VContainer([
-        Text("Single line"),
-        Text("Hello World!")
-    ]),
-    VContainer([
-        Text("And another line!")
-    ])
-])
-
-vlayout.add_child(first_column)
-vlayout.add_child(second_column)
+    @property
+    def natural_size(self):
+        rows, cols = HContainer(self.rotated_children()).natural_size
+        return (cols, rows)

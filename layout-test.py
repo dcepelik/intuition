@@ -33,11 +33,11 @@ class HContainerTest(unittest.TestCase):
         ])
 
         # everything
-        self.assertEqual(hcont.widgets_in_area(0, 0, 1, 100), (0, 2, 0, 0, 1, 16))
+        self.assertEqual(hcont.widgets_in_area(0, 0, 1, 100), (0, 3, 0, 0, 1, 16))
         # `f' in `first'
         self.assertEqual(hcont.widgets_in_area(0, 0, 1, 1), (0, 0, 0, 0, 1, 1))
         # nothing (first row skipped)
-        self.assertEqual(hcont.widgets_in_area(1, 0, 1, 100), (0, 2, 1, 0, 0, 0))
+        self.assertEqual(hcont.widgets_in_area(1, 0, 1, 100), (0, 3, 1, 0, 0, 0))
         # nothing (rows == cols == 0)
         self.assertEqual(hcont.widgets_in_area(0, 0, 0, 0), (0, 0, 0, 0, 0, 0))
         # `s' in `second'
@@ -47,10 +47,31 @@ class HContainerTest(unittest.TestCase):
         # `t' in `third'
         self.assertEqual(hcont.widgets_in_area(0, 11, 1, 1), (2, 2, 0, 0, 1, 1))
         # `d' in `third'
-        self.assertEqual(hcont.widgets_in_area(0, 15, 1, 100), (2, 2, 0, 4, 1, 1))
+        self.assertEqual(hcont.widgets_in_area(0, 15, 1, 100), (2, 3, 0, 4, 1, 1))
 
     def test_natural_size(self):
         self.assertEqual(HContainer([]).natural_size, (0, 0))
         self.assertEqual(HContainer([Text('lorem'), Text('ipsum')]).natural_size, (1, 10))
         self.assertEqual(HContainer([Text(''), Text('hello')]).natural_size, (1, 5))
         self.assertEqual(HContainer([Text(''), Text('')]).natural_size, (0, 0))
+
+class VContainerTest(unittest.TestCase):
+    def test_widgets_in_area(self):
+        self.assertEqual(VContainer([Text('hello')]).natural_size, (1, 5))
+        self.assertEqual(VContainer([Text('hello'), Text('you')]).natural_size, (2, 5))
+        self.assertEqual(VContainer([Text('improve'), Text('your')]).natural_size, (2, 7))
+        self.assertEqual(VContainer([]).natural_size, (0, 0))
+        self.assertEqual(VContainer([Text('i')]).natural_size, (1, 1))
+        self.assertEqual(VContainer([Text(''), Text('i')]).natural_size, (1, 1))
+
+    def test_widgets_in_area(self):
+        vcont = self.assertEqual(VContainer([]).widgets_in_area(0, 0, 100, 100), (0, 0, 0, 0, 0, 0))
+        vcont = VContainer([
+            Text('a'),
+            Text('little'),
+            Text('of'),
+            Text('text')
+        ])
+        self.assertEqual(vcont.widgets_in_area(0, 0, 100, 100), (0, 4, 0, 0, 4, 6))
+        self.assertEqual(vcont.widgets_in_area(0, 1, 100, 100), (0, 4, 0, 1, 3, 5))
+
