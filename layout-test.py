@@ -108,3 +108,17 @@ class VContainerTest(SoupUITestCase):
 
         self.assertEqual(vcont.render(screen, 0, 0, 0, 3, 4, 10), (2, 3))
         self.assertScreenContent(screen, ['bbb', 'dd'])
+
+class ColumnLayoutTest(SoupUITestCase):
+    def test_render(self):
+        layout = ColumnLayout()
+        layout.add_cell(Cell(max_width=2))
+        layout.add_cell(Cell(min_width=9, weight=1))
+        layout.add_cell(Cell())
+        layout.add_cell(Cell())
+        layout.add_child(Row([Text('1'), Text('2'), Text('veryveryverylong'), Text('4')]))
+        layout.add_child(Row([HViewport(Text('4'), 2), Text('world'), Text('6'), Text('7')]))
+        layout.add_child(Row([Text('hello'), Text('5'), Text('6'), Text('7')]))
+
+        screen = MockScreen(10, 40)
+        layout.render(screen, 0, 0, 0, 0, 10, 40)
