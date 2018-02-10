@@ -122,3 +122,16 @@ class ColumnLayoutTest(SoupUITestCase):
 
         screen = MockScreen(10, 40)
         layout.render(screen, 0, 0, 0, 0, 10, 40)
+
+class RowLayoutTest(SoupUITestCase):
+    def test_render(self):
+        layout = RowLayout()
+        layout.add_cell(Cell())
+        layout.add_cell(Cell())
+        layout.add_child(Column([VContainer([Text('1st row 1'), Text('1st row below')]), Text('2nd row 1')]))
+        layout.add_child(Column([Text('1st row 2'), VContainer([Text('2nd row 2'), Text('2nd row below')])]))
+
+        screen = MockScreen(10, 40)
+        layout.render(screen, 0, 0, 0, 0, 10, 40)
+        print()
+        print(screen)

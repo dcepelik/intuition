@@ -29,6 +29,11 @@ class TransposedWidget(Widget):
     def size(self):
         return swap_axes(self.widget.size)
 
+    @property
+    def children(self):
+        for child in self.widget.children:
+            yield child.transpose()
+
     def render(self, screen, y, x, i, j, rows, cols):
         return swap_axes(self.widget.render(screen, x, y, j, i, cols, rows))
 
@@ -62,8 +67,8 @@ class Text(Widget):
         return (rows, cols)
 
 class Container(Widget):
-    def __init__(self, children = []):
-        self._children = children
+    def __init__(self, children = None):
+        self._children = children or []
 
     @property
     def children(self):
@@ -167,8 +172,12 @@ class Cell:
         if min_height > max_height:
             raise ValueError('min_height must be less than or equal to max_height')
 
-class CellGroup(Container):
-    pass
+class CellGroup:
+    @property
+    def layout(self):
+        if not isinstance(self.parent, ColumnLayout):
+            raise ValueError('{} must be instance of ColumnLayout', self.__class__) # TEST
+        return self.parent
 
 class HViewport(Widget):
     def __init__(self, widget, cols):
@@ -178,19 +187,16 @@ class HViewport(Widget):
 
     @property
     def size(self):
-        widget_rows, _ = self.widget.size
-        return (widget_rows, self.cols)
+        widget_rows, widget_cols = self.widget.size
+        return (widget_rows, self.cols or widget_cols) # TODO or: a bit of a hack
 
     def render(self, screen, y, x, i, j, rows, cols):
         widget_rows, widget_cols = self.widget.render(screen, y, x, i, j, rows, self.cols)
         return (widget_rows, self.cols)
 
 class Row(CellGroup, HContainer):
-    @property
-    def layout(self):
-        if not isinstance(self.parent, ColumnLayout):
-            raise ValueError('Row must be instance of ColumnLayout')
-        return self.parent
+    def __init__(self, children = None):
+        super().__init__(children or [])
 
     @property
     def children(self):
@@ -219,7 +225,7 @@ class ColumnLayout(Layout):
     def calculate_cells_sizes(self, cols):
         cell_max_cols = [0] * len(self.cells)
         for child in self.children:
-            for idx, content in enumerate(child._children): # HACK!
+            for idx, content in enumerate(child.children):
                 _, cell_cols = content.size
                 cell_max_cols[idx] = max(cell_max_cols[idx], cell_cols)
 
@@ -229,11 +235,10 @@ class ColumnLayout(Layout):
 
     def render(self, screen, y, x, i, j, rows, cols):
         self.calculate_cells_sizes(cols)
-        VContainer(self.children).render(screen, y, x, i, j, rows, cols)
-        print(screen)
+        return VContainer(self.children).render(screen, y, x, i, j, rows, cols)
 
-#class VLayout(Layout):
-#    def add_child(self, child):
-#        if not isinstance(child, VContainer):
-#            raise ValueError('child of VLayout must be instance of VContainer')
-#        super().add_child(child)
+class Column(TransposeWidgetMixin, Row):
+    pass
+
+class RowLayout(TransposeWidgetMixin, ColumnLayout):
+    pass
