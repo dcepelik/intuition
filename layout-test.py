@@ -121,17 +121,28 @@ class ColumnLayoutTest(SoupUITestCase):
         layout.add_child(Row([Text('hello'), Text('5'), Text('6'), Text('7')]))
 
         screen = MockScreen(10, 40)
-        layout.render(screen, 0, 0, 0, 0, 10, 40)
+        self.assertEqual(layout.render(screen, 0, 0, 0, 0, 10, 40), (3, 27))
+
+        self.assertScreenContent(screen, [
+            '1    2    veryveryverylong4',
+            '4    world6               7',
+            'hello5    6               7'
+        ])
 
 class RowLayoutTest(SoupUITestCase):
     def test_render(self):
         layout = RowLayout()
         layout.add_cell(Cell())
         layout.add_cell(Cell())
-        layout.add_child(Column([VContainer([Text('1st row 1'), Text('1st row below')]), Text('2nd row 1')]))
-        layout.add_child(Column([Text('1st row 2'), VContainer([Text('2nd row 2'), Text('2nd row below')])]))
+        layout.add_child(Column([VContainer([Text('aaaaa'), Text('aaaaa')]), Text('bbbbb')]))
+        layout.add_child(Column([Text('ccccc'), VContainer([Text('ddddd'), Text('ddddd')])]))
 
         screen = MockScreen(10, 40)
-        layout.render(screen, 0, 0, 0, 0, 10, 40)
-        print()
-        print(screen)
+        self.assertEqual(layout.render(screen, 0, 0, 0, 0, 10, 40), (4, 10))
+
+        self.assertScreenContent(screen, [
+            'aaaaaccccc',
+            'aaaaa',
+            'bbbbbddddd',
+            '     ddddd'
+        ])

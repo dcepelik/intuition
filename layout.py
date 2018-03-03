@@ -1,7 +1,10 @@
-#!/usr/bin/env python
-
 from math import inf
 from enum import Enum
+
+INDENT_SIZE = 4
+
+def print_indented(string, indent):
+    print("{}{}".format(' ' * INDENT_SIZE * indent, string))
 
 class Widget:
     def __init__(self):
@@ -11,7 +14,12 @@ class Widget:
         return TransposedWidget(self)
 
     def render(self, screen, y, x, i, j, rows, cols):
-        raise NotImplementedError('widgets must implement the render() method')
+        raise NotImplementedError('{} must implement the render() method'.format(
+            self.__class__.__name__))
+
+    def print_tree(self, indent = 0):
+        print_indented("Widget `{} (size={})'".format(
+            self.__class__.__name__, self.size if hasattr(self, 'size') else '?'), indent)
 
 def swap_axes(yx):
     y, x = yx
@@ -37,10 +45,14 @@ class TransposedWidget(Widget):
     def render(self, screen, y, x, i, j, rows, cols):
         return swap_axes(self.widget.render(screen, x, y, j, i, cols, rows))
 
+    def print_tree(self, indent = 0):
+        super().print_tree(indent)
+        self.widget.print_tree(indent + 1)
+
 class TransposeWidgetMixin:
     @property
     def children(self):
-        for child in self._children:
+        for child in super().children:
             yield child.transpose()
 
     def render(self, screen, y, x, i, j, rows, cols):
@@ -66,8 +78,16 @@ class Text(Widget):
         rows = 1 if cols else 0
         return (rows, cols)
 
+def intersperse(items, separator):
+    it = iter(items)
+    yield next(it)
+    for item in it:
+        yield separator
+        yield item
+
 class Container(Widget):
     def __init__(self, children = None):
+        super().__init__()
         self._children = children or []
 
     @property
@@ -78,7 +98,12 @@ class Container(Widget):
         self._children.append(child)
         child.parent = self
 
-class MockScreen():
+    def print_tree(self, indent = 0):
+        super().print_tree(indent)
+        for child in self.children:
+            child.print_tree(indent + 1)
+
+class MockScreen:
     def __init__(self, nrows, ncols):
         self.nrows = nrows
         self.ncols = ncols
@@ -156,7 +181,7 @@ class VAlign(Enum):
     BOTTOM = 3
 
 class Cell:
-    def __init__(self, weight=1, halign=HAlign.LEFT, min_width=0, max_width=inf,
+    def __init__(self, weight=0, halign=HAlign.LEFT, min_width=0, max_width=inf,
         valign=VAlign.TOP, min_height=0, max_height=inf):
         self.weight = weight
         self.halign = halign
@@ -176,7 +201,8 @@ class CellGroup:
     @property
     def layout(self):
         if not isinstance(self.parent, ColumnLayout):
-            raise ValueError('{} must be instance of ColumnLayout', self.__class__) # TEST
+            #raise ValueError('{} must be instance of ColumnLayout'.format(self.__class__.__name__))
+            pass
         return self.parent
 
 class HViewport(Widget):
@@ -184,6 +210,9 @@ class HViewport(Widget):
         super().__init__()
         self.widget = widget
         self.cols = cols
+
+    def transpose(self):
+        return HViewport(self.widget.transpose(), self.cols)
 
     @property
     def size(self):
@@ -193,6 +222,10 @@ class HViewport(Widget):
     def render(self, screen, y, x, i, j, rows, cols):
         widget_rows, widget_cols = self.widget.render(screen, y, x, i, j, rows, self.cols)
         return (widget_rows, self.cols)
+
+    def print_tree(self, indent = 0):
+        super().print_tree(indent)
+        self.widget.print_tree(indent + 1)
 
 class Row(CellGroup, HContainer):
     def __init__(self, children = None):
@@ -222,20 +255,53 @@ class ColumnLayout(Layout):
     def __init__(self):
         super().__init__()
 
-    def calculate_cells_sizes(self, cols):
+    def find_max_over_columns(self):
         cell_max_cols = [0] * len(self.cells)
-        for child in self.children:
+        for child in super().children:
             for idx, content in enumerate(child.children):
                 _, cell_cols = content.size
                 cell_max_cols[idx] = max(cell_max_cols[idx], cell_cols)
+        return cell_max_cols
 
+    def calculate_cells_sizes(self, cols):
+        cell_max_cols = self.find_max_over_columns()
         cells_total = sum(cell_max_cols)
         for idx, cell in enumerate(self.cells):
-            cell.width = math.floor((cell_max_cols[idx] / cells_total) * cols)
+            cell.width = 0 if cell.weight > 0 else cell_max_cols[idx]
+            cell.width = max(cell.min_width, min(cell.max_width, cell.width)) # TODO min_width -> min_height, transpose cells too
+        avail_cols = cols - sum(cell.width for cell in self.cells)
+        if avail_cols > 0:
+            sum_weight = sum(cell.weight for cell in self.cells)
+            for cell in self.cells:
+                cell.width += int(avail_cols * (float(cell.weight) / sum_weight))
+
+    @property
+    def size(self):
+        cell_max_cols = self.find_max_over_columns()
+        width = sum(cell_max_cols)
+        height = 0
+        for child in self.children:
+            child_height, _ = child.size
+            height += child_height
+        return (height, width)
 
     def render(self, screen, y, x, i, j, rows, cols):
         self.calculate_cells_sizes(cols)
         return VContainer(self.children).render(screen, y, x, i, j, rows, cols)
+
+class Pager(Widget):
+    def __init__(self, widget):
+        super().__init__()
+        self.widget = widget
+        self.vscroll = 0
+        self.hscroll = 0
+
+    def render(self, screen, y, x, i, j, rows, cols):
+        return self.widget.render(screen, y, x, i + self.vscroll, j + self.hscroll, rows, cols)
+
+    @property
+    def size(self):
+        return self.widget.size
 
 class Column(TransposeWidgetMixin, Row):
     pass
