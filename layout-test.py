@@ -112,8 +112,8 @@ class VContainerTest(SoupUITestCase):
 class ColumnLayoutTest(SoupUITestCase):
     def test_render(self):
         layout = ColumnLayout()
-        layout.add_cell(Cell(max_width=2))
-        layout.add_cell(Cell(min_width=9, weight=1))
+        layout.add_cell(Cell())
+        layout.add_cell(Cell())
         layout.add_cell(Cell())
         layout.add_cell(Cell())
         layout.add_child(Row([Text('1'), Text('2'), Text('veryveryverylong'), Text('4')]))
@@ -128,6 +128,16 @@ class ColumnLayoutTest(SoupUITestCase):
             '4    world6               7',
             'hello5    6               7'
         ])
+
+class TransposedCellTest(SoupUITestCase):
+    def test_transpose(self):
+        cell = Cell(min_width=4, max_height=2, valign=VAlign.BOTTOM)
+        tcell = cell.transpose()
+        self.assertEqual(tcell.max_width, cell.max_height)
+        self.assertEqual(tcell.halign, cell.valign)
+        tcell.width = 20
+        self.assertEqual(tcell.width, cell.height)
+        self.assertEqual(tcell.height, cell.width)
 
 class RowLayoutTest(SoupUITestCase):
     def test_render(self):
@@ -145,4 +155,21 @@ class RowLayoutTest(SoupUITestCase):
             'aaaaa',
             'bbbbbddddd',
             '     ddddd'
+        ])
+
+    def test_weighted_render(self):
+        layout = RowLayout()
+        layout.add_cell(Cell(weight=1))
+        layout.add_cell(Cell(weight=1))
+        layout.add_child(Column([Text('aaa'), Text('bbb')]))
+        layout.add_child(Column([VContainer([Text('ccc'), Text('ccc')]), Text('ddd')]))
+
+        screen = MockScreen(6, 40)
+        self.assertEqual(layout.render(screen, 0, 0, 0, 0, screen.nrows, screen.ncols), (6, 6))
+        self.assertScreenContent(screen, [
+            'aaaccc',
+            '   ccc',
+            '',
+            'bbbddd',
+            '',
         ])

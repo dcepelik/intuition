@@ -197,6 +197,39 @@ class Cell:
         if min_height > max_height:
             raise ValueError('min_height must be less than or equal to max_height')
 
+    def transpose(self):
+        return TransposedCell(self)
+
+class TransposedCell:
+    def __init__(self, cell):
+        self.__dict__['cell'] = cell
+
+    def transpose(self):
+        return self.cell
+
+    def transposed_attr_name(name):
+        lookup = {
+            'halign': 'valign',
+            'min_width': 'min_height',
+            'max_width': 'max_height',
+            'valign': 'halign',
+            'min_height': 'min_width',
+            'max_height': 'max_width',
+            'width': 'height',
+            'height': 'width',
+        }
+        return lookup.get(name, name)
+
+    def __hasattr__(self, name):
+        return hasattr(self.cell, TransposedCell.transposed_attr_name(name))
+
+    def __getattr__(self, name):
+        return getattr(self.cell, TransposedCell.transposed_attr_name(name))
+
+    def __setattr__(self, name, value):
+        return setattr(self.cell, TransposedCell.transposed_attr_name(name), value)
+        
+
 class CellGroup:
     @property
     def layout(self):
@@ -239,15 +272,24 @@ class Row(CellGroup, HContainer):
 class Layout(Container):
     def __init__(self):
         super().__init__()
-        self.cells = []
+        self._cells = []
+
+    @property
+    def cells(self):
+        return self._cells
 
     def add_cell(self, cell):
-        self.cells.append(cell)
+        self._cells.append(cell)
 
     def add_child(self, child):
         if not isinstance(child, CellGroup):
             raise ValueError('child must be instance of CellGroup')
         super().add_child(child)
+
+class TransposeLayoutMixin(TransposeWidgetMixin):
+    @property
+    def cells(self):
+        return [cell.transpose() for cell in self._cells]
 
 import math
 
@@ -273,7 +315,8 @@ class ColumnLayout(Layout):
         if avail_cols > 0:
             sum_weight = sum(cell.weight for cell in self.cells)
             for cell in self.cells:
-                cell.width += int(avail_cols * (float(cell.weight) / sum_weight))
+                if cell.weight > 0:
+                    cell.width += int(avail_cols * (float(cell.weight) / sum_weight))
 
     @property
     def size(self):
@@ -306,5 +349,5 @@ class Pager(Widget):
 class Column(TransposeWidgetMixin, Row):
     pass
 
-class RowLayout(TransposeWidgetMixin, ColumnLayout):
+class RowLayout(TransposeLayoutMixin, ColumnLayout):
     pass

@@ -2,7 +2,7 @@
 
 import layout
 
-class SearchResultsWindow(layout.VContainer):
+class SearchResultsWindow(layout.RowLayout):
     pass
 
 class ThreadLine(layout.Row):
@@ -27,8 +27,9 @@ threads = ThreadView()
 pager = layout.Pager(threads)
 
 window = SearchResultsWindow()
-window.add_child(pager)
-window.add_child(layout.Text("Status line"))
+window.add_cell(layout.Cell(weight=1))
+window.add_cell(layout.Cell())
+window.add_child(layout.Column([pager, layout.Text("Status line")]))
 
 for i in range(0, 30):
     threads.add_child(ThreadLine("Date", "Sender", "Subject #{}".format(i)))
