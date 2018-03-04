@@ -311,6 +311,7 @@ class ColumnLayout(Layout):
         for idx, cell in enumerate(self.cells):
             cell.width = 0 if cell.weight > 0 else cell_max_cols[idx]
             cell.width = max(cell.min_width, min(cell.max_width, cell.width)) # TODO min_width -> min_height, transpose cells too
+            cell.width = min(cell.width, cols)
         avail_cols = cols - sum(cell.width for cell in self.cells)
         if avail_cols > 0:
             sum_weight = sum(cell.weight for cell in self.cells)
