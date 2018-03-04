@@ -2,6 +2,8 @@
 
 import layout
 
+print(layout.RowLayout.__mro__)
+
 class SearchResultsWindow(layout.RowLayout):
     pass
 
@@ -45,6 +47,7 @@ window.add_cell(layout.Cell())
 window.add_cell(layout.Cell(weight=1))
 window.add_cell(layout.Cell())
 window.add_child(layout.Column([window_list, pager, statusbar]))
+#print(pager.parent)
 
 for i in range(0, 30):
     threads.add_child(ThreadLine("Date", "Sender", "Subject #{}".format(i)))

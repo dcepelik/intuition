@@ -21,6 +21,16 @@ class Widget:
         print_indented("Widget `{} (size={})'".format(
             self.__class__.__name__, self.size if hasattr(self, 'size') else '?'), indent)
 
+    def successor(self):
+        widget = self
+        while widget.parent != None:
+            sibling_idx = widget.parent.children.index(widget) + 1
+            if sibling_idx < len(widget.parent.children):
+                return widget.parent.children[sibling_idx]
+            else:
+                widget = widget.parent
+        return None
+
 def swap_axes(yx):
     y, x = yx
     return (x, y)
@@ -39,8 +49,7 @@ class TransposedWidget(Widget):
 
     @property
     def children(self):
-        for child in self.widget.children:
-            yield child.transpose()
+        return [child.transpose() for child in self.widget.children]
 
     def render(self, screen, y, x, i, j, rows, cols):
         return swap_axes(self.widget.render(screen, x, y, j, i, cols, rows))
@@ -52,8 +61,7 @@ class TransposedWidget(Widget):
 class TransposeWidgetMixin:
     @property
     def children(self):
-        for child in super().children:
-            yield child.transpose()
+        return [child.transpose() for child in super().children]
 
     def render(self, screen, y, x, i, j, rows, cols):
         return swap_axes(super().render(screen, x, y, j, i, cols, rows))
@@ -89,6 +97,8 @@ class Container(Widget):
     def __init__(self, children = None):
         super().__init__()
         self._children = children or []
+        #for child in self._children:
+        #    child.parent = self
 
     @property
     def children(self):
@@ -102,6 +112,9 @@ class Container(Widget):
         super().print_tree(indent)
         for child in self.children:
             child.print_tree(indent + 1)
+
+    def successor(self):
+        return self.children[0]
 
 class MockScreen:
     def __init__(self, nrows, ncols):
@@ -266,8 +279,7 @@ class Row(CellGroup, HContainer):
 
     @property
     def children(self):
-        for idx, child in enumerate(super().children):
-            yield HViewport(child, self.layout.cells[idx].width)
+        return [HViewport(child, self.layout.cells[idx].width) for idx, child in enumerate(super().children)]
 
 class Layout(Container):
     def __init__(self):
@@ -293,7 +305,7 @@ class TransposeLayoutMixin(TransposeWidgetMixin):
 
 import math
 
-class ColumnLayout(Layout):
+class ColumnLayout(VContainer, Layout):
     def __init__(self):
         super().__init__()
 
@@ -331,7 +343,7 @@ class ColumnLayout(Layout):
 
     def render(self, screen, y, x, i, j, rows, cols):
         self.calculate_cells_sizes(cols)
-        return VContainer(self.children).render(screen, y, x, i, j, rows, cols)
+        return super().render(screen, y, x, i, j, rows, cols)
 
 class Pager(Widget):
     def __init__(self, widget):
