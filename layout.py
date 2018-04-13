@@ -35,40 +35,43 @@ def swap_axes(yx):
     y, x = yx
     return (x, y)
 
-# TODO Rename `Transposed' stuff to something else like XYWidget
-class TransposedWidget(Widget):
+def transpose_widget(widget_class):
+    class TransposedWidgetClass(widget_class):
+        @property
+        def children(self):
+            return [child.transpose() for child in super().children]
+
+        def render(self, screen, y, x, i, j, rows, cols):
+            return swap_axes(super().render(screen, x, y, j, i, cols, rows))
+
+        @property
+        def size(self):
+            return swap_axes(super().size)
+
+    return TransposedWidgetClass
+
+class Wrapper(Widget):
     def __init__(self, widget):
         self.widget = widget
 
     def transpose(self):
-        return self.widget
+        return TransposedWrapper(self)
+
+    @property 
+    def children(self):
+        return self.widget.children
+
+    def render(self, screen, y, x, i, j, rows, cols):
+        return self.widget.render(screen, y, x, i, j, rows, cols)
 
     @property
     def size(self):
-        return swap_axes(self.widget.size)
+        return self.widget.size
 
-    @property
-    def children(self):
-        return [child.transpose() for child in self.widget.children]
+class TransposedWrapper(transpose_widget(Wrapper)):
+    pass
 
-    def render(self, screen, y, x, i, j, rows, cols):
-        return swap_axes(self.widget.render(screen, x, y, j, i, cols, rows))
-
-    def print_tree(self, indent = 0):
-        super().print_tree(indent)
-        self.widget.print_tree(indent + 1)
-
-class TransposeWidgetMixin:
-    @property
-    def children(self):
-        return [child.transpose() for child in super().children]
-
-    def render(self, screen, y, x, i, j, rows, cols):
-        return swap_axes(super().render(screen, x, y, j, i, cols, rows))
-
-    @property
-    def size(self):
-        return swap_axes(super().size)
+TransposedWidget = TransposedWrapper
 
 class Text(Widget):
     def __init__(self, text):
@@ -180,7 +183,7 @@ class HContainer(Container):
 '''
 Renders widgets vertically from top to bottom.
 '''
-class VContainer(TransposeWidgetMixin, HContainer):
+class VContainer(transpose_widget(HContainer)):
     pass
 
 class HAlign(Enum):
@@ -298,14 +301,9 @@ class Layout(Container):
             raise ValueError('child must be instance of CellGroup')
         super().add_child(child)
 
-class TransposeLayoutMixin(TransposeWidgetMixin):
-    @property
-    def cells(self):
-        return [cell.transpose() for cell in self._cells]
-
 import math
 
-class ColumnLayout(VContainer, Layout):
+class ColumnLayout(Layout):
     def __init__(self):
         super().__init__()
 
@@ -322,7 +320,7 @@ class ColumnLayout(VContainer, Layout):
         cells_total = sum(cell_max_cols)
         for idx, cell in enumerate(self.cells):
             cell.width = 0 if cell.weight > 0 else cell_max_cols[idx]
-            cell.width = max(cell.min_width, min(cell.max_width, cell.width)) # TODO min_width -> min_height, transpose cells too
+            cell.width = max(cell.min_width, min(cell.max_width, cell.width))
             cell.width = min(cell.width, cols)
         avail_cols = cols - sum(cell.width for cell in self.cells)
         if avail_cols > 0:
@@ -334,16 +332,16 @@ class ColumnLayout(VContainer, Layout):
     @property
     def size(self):
         cell_max_cols = self.find_max_over_columns()
-        width = sum(cell_max_cols)
-        height = 0
+        cols = sum(cell_max_cols)
+        rows = 0
         for child in self.children:
-            child_height, _ = child.size
-            height += child_height
-        return (height, width)
+            child_rows, _ = child.size
+            rows += child_rows
+        return (rows, cols)
 
     def render(self, screen, y, x, i, j, rows, cols):
         self.calculate_cells_sizes(cols)
-        return super().render(screen, y, x, i, j, rows, cols)
+        return VContainer(self.children).render(screen, y, x, i, j, rows, cols)
 
 class Pager(Widget):
     def __init__(self, widget):
@@ -359,8 +357,8 @@ class Pager(Widget):
     def size(self):
         return self.widget.size
 
-class Column(TransposeWidgetMixin, Row):
+class Column(transpose_widget(Row)):
     pass
 
-class RowLayout(TransposeLayoutMixin, ColumnLayout):
+class RowLayout(transpose_widget(ColumnLayout)):
     pass
