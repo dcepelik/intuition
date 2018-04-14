@@ -1,3 +1,6 @@
+"""Maybe it's not perfect, but it works like a charm.
+"""
+
 from math import inf
 from enum import Enum
 
@@ -106,7 +109,7 @@ class MockScreen:
 
     @property
     def content(self):
-        return '\n'.join(self.rows) + '\n'
+        return '\n'.join(self.rows)
 
     def __repr__(self):
         return self.content
@@ -271,6 +274,9 @@ class HViewport(Widget):
         super().print_tree(indent)
         self.widget.print_tree(indent + 1)
 
+class VViewport(transpose_widget(HViewport)):
+    pass
+
 class Row(CellGroup, HContainer):
     def __init__(self, children = None):
         super().__init__(children or [])
@@ -350,9 +356,18 @@ class Pager(Widget):
         self.widget = widget
         self.vscroll = 0
         self.hscroll = 0
+        self.last_render_rows = None
 
     def render(self, screen, y, x, i, j, rows, cols):
+        self.last_render_rows = rows
         return self.widget.render(screen, y, x, i + self.vscroll, j + self.hscroll, rows, cols)
+
+    def next_page(self):
+        rows, _ = self.size
+        self.vscroll = max(0, min(self.vscroll + self.last_render_rows, rows - 1))
+
+    def prev_page(self):
+        self.vscroll = max(self.vscroll - self.last_render_rows, 0)
 
     @property
     def size(self):

@@ -2,23 +2,7 @@
 
 import layout
 
-class B:
-    def f(self):
-        print("jů")
-
-class A:
-    def __init__(self, itype):
-        self.itype = itype
-
-    def hello(self):
-        x = self.itype()
-        x.f()
-
-a = A(B)
-a.hello()
-
 screen = layout.MockScreen(20, 80)
-print(screen)
 
 class SearchResultsWindow(layout.RowLayout):
     pass
@@ -70,5 +54,17 @@ for i in range(0, 30):
 
 pager.vscroll += 2
 split_view = layout.VContainer()
+window.render(screen, 0, 0, 0, 0, screen.nrows, screen.ncols)
+print(screen)
+pager.next_page()
+screen.clear()
+window.render(screen, 0, 0, 0, 0, screen.nrows, screen.ncols)
+print(screen)
+pager.next_page()
+screen.clear()
+window.render(screen, 0, 0, 0, 0, screen.nrows, screen.ncols)
+print(screen)
+pager.prev_page()
+screen.clear()
 window.render(screen, 0, 0, 0, 0, screen.nrows, screen.ncols)
 print(screen)
