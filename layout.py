@@ -6,31 +6,6 @@ INDENT_SIZE = 4
 def print_indented(string, indent):
     print("{}{}".format(' ' * INDENT_SIZE * indent, string))
 
-class Widget:
-    def __init__(self):
-        self.parent = None
-
-    def transpose(self):
-        return TransposedWidget(self)
-
-    def render(self, screen, y, x, i, j, rows, cols):
-        raise NotImplementedError('{} must implement the render() method'.format(
-            self.__class__.__name__))
-
-    def print_tree(self, indent = 0):
-        print_indented("Widget `{} (size={})'".format(
-            self.__class__.__name__, self.size if hasattr(self, 'size') else '?'), indent)
-
-    def successor(self):
-        widget = self
-        while widget.parent != None:
-            sibling_idx = widget.parent.children.index(widget) + 1
-            if sibling_idx < len(widget.parent.children):
-                return widget.parent.children[sibling_idx]
-            else:
-                widget = widget.parent
-        return None
-
 def swap_axes(yx):
     y, x = yx
     return (x, y)
@@ -50,8 +25,34 @@ def transpose_widget(widget_class):
 
     return TransposedWidgetClass
 
+class Widget:
+    def __init__(self):
+        self.parent = None
+
+    def transpose(self):
+        return TransposedWrapper(self)
+
+    def render(self, screen, y, x, i, j, rows, cols):
+        raise NotImplementedError('{} must implement the render() method'.format(
+            self.__class__.__name__))
+
+    def print_tree(self, indent = 0):
+        print_indented("Widget `{} (size={})'".format(
+            self.__class__.__name__, self.size if hasattr(self, 'size') else '?'), indent)
+
+    def successor(self):
+        widget = self
+        while widget.parent != None:
+            sibling_idx = widget.parent.children.index(widget) + 1
+            if sibling_idx < len(widget.parent.children):
+                return widget.parent.children[sibling_idx]
+            else:
+                widget = widget.parent
+        return None
+
 class Wrapper(Widget):
     def __init__(self, widget):
+        super().__init__()
         self.widget = widget
 
     def transpose(self):
@@ -71,10 +72,9 @@ class Wrapper(Widget):
 class TransposedWrapper(transpose_widget(Wrapper)):
     pass
 
-TransposedWidget = TransposedWrapper
-
 class Text(Widget):
     def __init__(self, text):
+        super().__init__()
         self.text = text
 
     @property
@@ -88,36 +88,6 @@ class Text(Widget):
         cols = len(text)
         rows = 1 if cols else 0
         return (rows, cols)
-
-def intersperse(items, separator):
-    it = iter(items)
-    yield next(it)
-    for item in it:
-        yield separator
-        yield item
-
-class Container(Widget):
-    def __init__(self, children = None):
-        super().__init__()
-        self._children = children or []
-        #for child in self._children:
-        #    child.parent = self
-
-    @property
-    def children(self):
-        return self._children
-
-    def add_child(self, child):
-        self._children.append(child)
-        child.parent = self
-
-    def print_tree(self, indent = 0):
-        super().print_tree(indent)
-        for child in self.children:
-            child.print_tree(indent + 1)
-
-    def successor(self):
-        return self.children[0]
 
 class MockScreen:
     def __init__(self, nrows, ncols):
@@ -141,12 +111,35 @@ class MockScreen:
     def __repr__(self):
         return self.content
 
+class Container(Widget):
+    def __init__(self, children = None):
+        super().__init__()
+        self._children = children or []
+        for child in self._children:
+            child.parent = self
+
+    @property
+    def children(self):
+        return self._children
+
+    def add_child(self, child):
+        self._children.append(child)
+        child.parent = self
+
+    def print_tree(self, indent = 0):
+        super().print_tree(indent)
+        for child in self.children:
+            child.print_tree(indent + 1)
+
+    def successor(self):
+        return self.children[0]
+
 import itertools
 
-'''
-Renders widgets horizontally from left to right.
-'''
 class HContainer(Container):
+    """Renders widgets horizontally from left to right.
+    """
+
     def render(self, screen, y, x, i, j, rows, cols):
         children = iter(self.children)
         for child in children:
@@ -180,10 +173,12 @@ class HContainer(Container):
             max_rows = max(max_rows, child_rows)
         return (max_rows, total_cols)
 
-'''
-Renders widgets vertically from top to bottom.
-'''
 class VContainer(transpose_widget(HContainer)):
+    """Renders widgets vertically from top to bottom.
+    """
+    pass
+
+class NewVContainer(Container):
     pass
 
 class HAlign(Enum):
@@ -284,7 +279,7 @@ class Row(CellGroup, HContainer):
     def children(self):
         return [HViewport(child, self.layout.cells[idx].width) for idx, child in enumerate(super().children)]
 
-class Layout(Container):
+class Layout:
     def __init__(self):
         super().__init__()
         self._cells = []
@@ -296,26 +291,26 @@ class Layout(Container):
     def add_cell(self, cell):
         self._cells.append(cell)
 
-    def add_child(self, child):
-        if not isinstance(child, CellGroup):
-            raise ValueError('child must be instance of CellGroup')
-        super().add_child(child)
+    #def add_child(self, child):
+    #    if not isinstance(child, CellGroup):
+    #        raise ValueError('child must be instance of CellGroup')
+    #    super().add_child(child)
 
 import math
 
-class ColumnLayout(Layout):
+class ColumnLayout(Layout, VContainer):
     def __init__(self):
         super().__init__()
 
     def find_max_over_columns(self):
         cell_max_cols = [0] * len(self.cells)
-        for child in super().children:
+        for child in self._children:
             for idx, content in enumerate(child.children):
                 _, cell_cols = content.size
                 cell_max_cols[idx] = max(cell_max_cols[idx], cell_cols)
         return cell_max_cols
 
-    def calculate_cells_sizes(self, cols):
+    def calculate_size_of_cells(self, cols):
         cell_max_cols = self.find_max_over_columns()
         cells_total = sum(cell_max_cols)
         for idx, cell in enumerate(self.cells):
@@ -334,14 +329,20 @@ class ColumnLayout(Layout):
         cell_max_cols = self.find_max_over_columns()
         cols = sum(cell_max_cols)
         rows = 0
-        for child in self.children:
+        for child in self._children:
             child_rows, _ = child.size
             rows += child_rows
         return (rows, cols)
 
     def render(self, screen, y, x, i, j, rows, cols):
-        self.calculate_cells_sizes(cols)
-        return VContainer(self.children).render(screen, y, x, i, j, rows, cols)
+        self.calculate_size_of_cells(cols)
+        return super().render(screen, y, x, i, j, rows, cols)
+
+class Column(transpose_widget(Row)):
+    pass
+
+class RowLayout(transpose_widget(ColumnLayout)):
+    pass
 
 class Pager(Widget):
     def __init__(self, widget):
@@ -356,9 +357,3 @@ class Pager(Widget):
     @property
     def size(self):
         return self.widget.size
-
-class Column(transpose_widget(Row)):
-    pass
-
-class RowLayout(transpose_widget(ColumnLayout)):
-    pass

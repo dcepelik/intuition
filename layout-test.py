@@ -38,7 +38,7 @@ class FixedSizeWidget(Widget):
 class TransposedWidgetTest(SoupUITestCase):
     def test_size(self):
         fixed = FixedSizeWidget()
-        transposed = TransposedWidget(fixed)
+        transposed = TransposedWrapper(fixed)
         self.assertEqual(transposed.size, (4, 2))
 
 class HContainerTest(SoupUITestCase):
