@@ -30,7 +30,7 @@ A `Widget` is a base class representing a renderable object. It defines a minima
 interface all widgets must implement:
 
   - `size(self)` returns the size of the widget as a `(rows, cols)` tuple.
-  - `render(self, screen, y, x, j, i, rows, cols)` renders (a part of) the
+  - `render(self, screen, y, x, i, j, rows, cols)` renders (a part of) the
     widget to position `(y, x)` on the `screen`. The part of the widget to
     be rendered is given by the other parameters, where `(j, i)` is the top-left
     corner of the rendered rectangle which is `rows` by `cols` characters:
