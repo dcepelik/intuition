@@ -41,8 +41,7 @@ class Widget:
         print_indented("{} (size={})".format(
             self.__class__.__name__, self.size if hasattr(self, 'size') else '?'), indent)
 
-    # TODO make prop
-    def successor(self):
+    def find_successor(self):
         widget = self
         while widget.parent != None:
             sibling_idx = widget.parent._children.index(widget) + 1
@@ -52,16 +51,11 @@ class Widget:
                 widget = widget.parent
         return None
 
-    # TODO make prop
-    def focusable_successor(self):
-        widget = self
-        while True: # TODO do .. while
-            widget = widget.successor()
-            if not widget:
-                return None
-            if widget.focusable:
-                break
-        return widget
+    def find_focusable_successor(self):
+        succ = self.find_successor()
+        while succ and not succ.focusable:
+            succ = succ.find_successor()
+        return succ
 
     def focus(self):
         if self.parent:
@@ -74,12 +68,10 @@ class Widget:
             return self.parent.focused_child == self and self.parent.is_focused
         return True
 
-    @property
-    def focused_leaf(self):
+    def find_focused_leaf(self):
         return self
 
-    @property
-    def first_leaf(self):
+    def find_first_leaf(self):
         return self
 
     def lookup(self, typ):
@@ -112,12 +104,11 @@ class Wrapper(Widget):
         return self.widget.print_tree(indent)
 
     @property
-    def first_leaf(self):
-        return self.widget.first_leaf
+    def find_first_leaf(self):
+        return self.widget.find_first_leaf
 
-    @property
-    def focused_leaf(self):
-        return self.widget.focused_leaf
+    def find_focused_leaf(self):
+        return self.widget.find_focused_leaf()
 
     def focus(self):
         self.widget.focus()
@@ -188,19 +179,17 @@ class Container(Widget):
         for child in self._children:
             child.print_tree(indent + 1)
 
-    def successor(self):
+    def find_successor(self):
         return self._children[0]
 
-    @property
-    def focused_leaf(self):
+    def find_focused_leaf(self):
         if self.focused_child:
-            return self.focused_child.focused_leaf
+            return self.focused_child.find_focused_leaf()
         return self
 
-    @property
-    def first_leaf(self):
+    def find_first_leaf(self):
         if len(self._children):
-            return self._children[0].first_leaf
+            return self._children[0].find_first_leaf()
         return None
 
 import itertools
