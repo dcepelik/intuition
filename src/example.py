@@ -1,53 +1,53 @@
 #!/usr/bin/python3
 
-import layout
+import tulip
 
-screen = layout.MockScreen(20, 80)
+screen = tulip.MockScreen(20, 80)
 
-class SearchResultsWindow(layout.RowLayout):
+class SearchResultsWindow(tulip.RowLayout):
     pass
 
-class ThreadLine(layout.Row):
+class ThreadLine(tulip.Row):
     def __init__(self, date, sender, subject):
         super().__init__()
-        self.add_child(layout.Text(date))
-        self.add_child(layout.Text('  '))
-        self.add_child(layout.Text(sender))
-        self.add_child(layout.Text('  '))
-        self.add_child(layout.Text(subject))
+        self.add_child(tulip.Text(date))
+        self.add_child(tulip.Text('  '))
+        self.add_child(tulip.Text(sender))
+        self.add_child(tulip.Text('  '))
+        self.add_child(tulip.Text(subject))
         self.focusable = True
 
-class ThreadView(layout.ColumnLayout):
+class ThreadView(tulip.ColumnLayout):
     def __init__(self):
         super().__init__()
-        self.add_cell(layout.Cell())
-        self.add_cell(layout.Cell())
-        self.add_cell(layout.Cell())
-        self.add_cell(layout.Cell())
-        self.add_cell(layout.Cell(weight=2))
+        self.add_cell(tulip.Cell())
+        self.add_cell(tulip.Cell())
+        self.add_cell(tulip.Cell())
+        self.add_cell(tulip.Cell())
+        self.add_cell(tulip.Cell(weight=2))
 
 threads = ThreadView()
-pager = layout.Pager([threads])
+pager = tulip.Pager([threads])
 
-window_list = layout.HContainer()
-window_list.add_child(layout.Text('+inbox-killed  '))
-window_list.add_child(layout.Text('+spam'))
+window_list = tulip.HContainer()
+window_list.add_child(tulip.Text('+inbox-killed  '))
+window_list.add_child(tulip.Text('+spam'))
 
-statusbar = layout.ColumnLayout()
-statusbar.add_cell(layout.Cell(weight=1))
-statusbar.add_cell(layout.Cell(weight=1))
-statusbar.add_cell(layout.Cell(weight=1))
-statusbar.add_child(layout.Row([
-    layout.Text(':reply-all'),
-    layout.Text('1/20'),
-    layout.Text('1/405'),
+statusbar = tulip.ColumnLayout()
+statusbar.add_cell(tulip.Cell(weight=1))
+statusbar.add_cell(tulip.Cell(weight=1))
+statusbar.add_cell(tulip.Cell(weight=1))
+statusbar.add_child(tulip.Row([
+    tulip.Text(':reply-all'),
+    tulip.Text('1/20'),
+    tulip.Text('1/405'),
 ]))
 
 window = SearchResultsWindow()
-window.add_cell(layout.Cell())
-window.add_cell(layout.Cell(weight=1))
-window.add_cell(layout.Cell())
-window.add_child(layout.Column([window_list, pager, statusbar]))
+window.add_cell(tulip.Cell())
+window.add_cell(tulip.Cell(weight=1))
+window.add_cell(tulip.Cell())
+window.add_child(tulip.Column([window_list, pager, statusbar]))
 #print(pager.parent)
 
 for i in range(0, 30):
