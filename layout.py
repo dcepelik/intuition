@@ -16,8 +16,8 @@ def transpose_widget(widget_class):
         def rendered_widgets(self):
             return [child.transpose() for child in super().rendered_widgets]
 
-        def render(self, screen, y, x, i, j, rows, cols):
-            return swap_axes(super().render(screen, x, y, j, i, cols, rows))
+        def _render(self, screen, y, x, i, j, rows, cols):
+            return swap_axes(super()._render(screen, x, y, j, i, cols, rows))
 
         @property
         def size(self):
@@ -29,12 +29,23 @@ class Widget:
     def __init__(self):
         self.parent = None
         self.focusable = False
+        self.last_render_y = None
+        self.last_render_x = None
+        self.last_render_rows = None
+        self.last_render_cols = None
 
     def transpose(self):
         return TransposedWrapper(self)
 
     def render(self, screen, y, x, i, j, rows, cols):
-        raise NotImplementedError('{} must implement the render() method'.format(
+        self.last_render_y = y
+        self.last_render_x = x
+        self.last_render_rows = rows
+        self.last_render_cols = cols
+        return self._render(screen, y, x, i, j, rows, cols)
+
+    def _render(self, screen, y, x, i, j, rows, cols):
+        raise NotImplementedError('{} must implement the _render() method'.format(
             self.__class__.__name__))
 
     def print_tree(self, indent = 0):
@@ -93,7 +104,7 @@ class Wrapper(Widget):
     def rendered_widgets(self):
         return self.widget.rendered_widgets
 
-    def render(self, screen, y, x, i, j, rows, cols):
+    def _render(self, screen, y, x, i, j, rows, cols):
         return self.widget.render(screen, y, x, i, j, rows, cols)
 
     @property
@@ -125,7 +136,7 @@ class Text(Widget):
     def size(self):
         return (1, len(self.text)) if self.text else (0, 0)
 
-    def render(self, screen, y, x, i, j, rows, cols):
+    def _render(self, screen, y, x, i, j, rows, cols):
         end = j + cols
         text = '' if i > 0 or rows == 0 else self.text[j:end]
         screen.put(y, x, text)
@@ -198,7 +209,7 @@ class HContainer(Container):
     """Renders widgets horizontally from left to right.
     """
 
-    def render(self, screen, y, x, i, j, rows, cols):
+    def _render(self, screen, y, x, i, j, rows, cols):
         widgets = iter(self.rendered_widgets)
         for widget in widgets:
             widget_rows, widget_cols = widget.size
@@ -318,7 +329,7 @@ class HViewport(Widget):
         widget_rows, widget_cols = self.widget.size
         return (widget_rows, self.cols or widget_cols) # TODO or: a bit of a hack
 
-    def render(self, screen, y, x, i, j, rows, cols):
+    def _render(self, screen, y, x, i, j, rows, cols):
         widget_rows, widget_cols = self.widget.render(screen, y, x, i, j, rows, self.cols)
         return (widget_rows, self.cols)
 
@@ -392,9 +403,9 @@ class ColumnLayout(Layout, VContainer):
             rows += child_rows
         return (rows, cols)
 
-    def render(self, screen, y, x, i, j, rows, cols):
+    def _render(self, screen, y, x, i, j, rows, cols):
         self.calculate_size_of_cells(cols)
-        return super().render(screen, y, x, i, j, rows, cols)
+        return super()._render(screen, y, x, i, j, rows, cols)
 
 class Column(transpose_widget(Row)):
     pass
@@ -407,11 +418,9 @@ class Pager(VContainer):
         super().__init__(children)
         self.vscroll = 0
         self.hscroll = 0
-        self.last_render_rows = None
 
-    def render(self, screen, y, x, i, j, rows, cols):
-        self.last_render_rows = rows
-        return super().render(screen, y, x, i + self.vscroll, j + self.hscroll, rows, cols)
+    def _render(self, screen, y, x, i, j, rows, cols):
+        return super()._render(screen, y, x, i + self.vscroll, j + self.hscroll, rows, cols)
 
     def next_page(self):
         rows, _ = self.size
