@@ -73,6 +73,25 @@ class VContainer(tulip.transpose_widget(HContainer)):
     pass
 ```
 
+The transposition is simple, too:
+
+```python
+def transpose_widget(widget_class):
+    class TransposedWidgetClass(widget_class):
+        @property
+        def rendered_widgets(self):
+            return [child.transpose() for child in super().rendered_widgets]
+
+        def _render(self, screen, y, x, i, j, rows, cols):
+            return swap_axes(super()._render(screen, x, y, j, i, cols, rows))
+
+        @property
+        def size(self):
+            return swap_axes(super().size)
+
+    return TransposedWidgetClass
+```
+
 ## MORE TO COME
 
 Stay tuned!
