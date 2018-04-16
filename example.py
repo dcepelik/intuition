@@ -26,7 +26,7 @@ class ThreadView(layout.ColumnLayout):
         self.add_cell(layout.Cell(weight=2))
 
 threads = ThreadView()
-pager = layout.Pager(threads)
+pager = layout.Pager([threads])
 
 window_list = layout.HContainer()
 window_list.add_child(layout.Text('+inbox-killed  '))
@@ -52,19 +52,34 @@ window.add_child(layout.Column([window_list, pager, statusbar]))
 for i in range(0, 30):
     threads.add_child(ThreadLine("Date", "Sender", "Subject #{}".format(i)))
 
-pager.vscroll += 2
-split_view = layout.VContainer()
-window.render(screen, 0, 0, 0, 0, screen.nrows, screen.ncols)
-print(screen)
-pager.next_page()
-screen.clear()
-window.render(screen, 0, 0, 0, 0, screen.nrows, screen.ncols)
-print(screen)
-pager.next_page()
-screen.clear()
-window.render(screen, 0, 0, 0, 0, screen.nrows, screen.ncols)
-print(screen)
-pager.prev_page()
-screen.clear()
-window.render(screen, 0, 0, 0, 0, screen.nrows, screen.ncols)
-print(screen)
+import sys, tty, termios
+
+def read_char():
+    fd = sys.stdin.fileno()
+    old_settings = termios.tcgetattr(fd)
+    try:
+        tty.setraw(sys.stdin.fileno())
+        ch = sys.stdin.read(1)
+    finally:
+        termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+    return ch
+
+window.first_leaf.focus()
+
+while True:
+    sys.stdout.write("\033[H\033[J")
+    screen.clear()
+    window.render(screen, 0, 0, 0, 0, screen.nrows, screen.ncols)
+    print(screen)
+    print("Focused:")
+    window.focused_leaf.print_tree(1)
+    ch = read_char()
+    if ch == 'q':
+        break
+    elif ch == 'J':
+        pager.next_page()
+    elif ch == 'K':
+        pager.prev_page()
+    elif ch == 'j':
+        print("Succ:")
+        window.focused_leaf.successor().first_leaf.focus()

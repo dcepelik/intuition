@@ -1,10 +1,7 @@
-"""Maybe it's not perfect, but it works like a charm.
-"""
-
 from math import inf
 from enum import Enum
 
-INDENT_SIZE = 4
+INDENT_SIZE = 2
 
 def print_indented(string, indent):
     print("{}{}".format(' ' * INDENT_SIZE * indent, string))
@@ -40,18 +37,44 @@ class Widget:
             self.__class__.__name__))
 
     def print_tree(self, indent = 0):
-        print_indented("Widget `{} (size={})'".format(
+        print_indented("{} (size={})".format(
             self.__class__.__name__, self.size if hasattr(self, 'size') else '?'), indent)
 
     def successor(self):
         widget = self
         while widget.parent != None:
-            sibling_idx = widget.parent.children.index(widget) + 1
-            if sibling_idx < len(widget.parent.children):
-                return widget.parent.children[sibling_idx]
+            sibling_idx = widget.parent._children.index(widget) + 1
+            if sibling_idx < len(widget.parent._children):
+                return widget.parent._children[sibling_idx]
             else:
                 widget = widget.parent
         return None
+
+    def focus(self):
+        if self.parent:
+            self.parent.focused_child = self
+            self.parent.focus()
+
+    @property
+    def is_focused(self):
+        if self.parent:
+            return self.parent.focused_child == self and self.parent.is_focused
+        return True
+
+    @property
+    def focused_leaf(self):
+        return self
+
+    @property
+    def first_leaf(self):
+        return self
+
+    def lookup(self, typ):
+        if isinstance(self, typ):
+            return self
+        if self.parent:
+            return self.parent.lookup(typ)
+        raise RuntimeError("Requested predecessor of type {} not found".format(typ))
 
 class Wrapper(Widget):
     def __init__(self, widget):
@@ -72,6 +95,20 @@ class Wrapper(Widget):
     def size(self):
         return self.widget.size
 
+    def print_tree(self, indent = 0):
+        return self.widget.print_tree(indent)
+
+    @property
+    def first_leaf(self):
+        return self.widget.first_leaf
+
+    @property
+    def focused_leaf(self):
+        return self.widget.focused_leaf
+
+    def focus(self):
+        self.widget.focus()
+
 class TransposedWrapper(transpose_widget(Wrapper)):
     pass
 
@@ -91,6 +128,9 @@ class Text(Widget):
         cols = len(text)
         rows = 1 if cols else 0
         return (rows, cols)
+
+    def print_tree(self, indent = 0):
+        print_indented("Text ('{}')".format(self.text), indent)
 
 class MockScreen:
     def __init__(self, nrows, ncols):
@@ -120,6 +160,7 @@ class Container(Widget):
         self._children = children or []
         for child in self._children:
             child.parent = self
+        self.focused_child = None
 
     @property
     def children(self):
@@ -131,11 +172,21 @@ class Container(Widget):
 
     def print_tree(self, indent = 0):
         super().print_tree(indent)
-        for child in self.children:
+        for child in self._children:
             child.print_tree(indent + 1)
 
     def successor(self):
-        return self.children[0]
+        return self._children[0]
+
+    @property
+    def focused_leaf(self):
+        return self.focused_child.focused_leaf
+
+    @property
+    def first_leaf(self):
+        if len(self._children):
+            return self._children[0].first_leaf
+        return None
 
 import itertools
 
@@ -247,10 +298,7 @@ class TransposedCell:
 class CellGroup:
     @property
     def layout(self):
-        if not isinstance(self.parent, ColumnLayout):
-            #raise ValueError('{} must be instance of ColumnLayout'.format(self.__class__.__name__))
-            pass
-        return self.parent
+        return self.lookup(Layout)
 
 class HViewport(Widget):
     def __init__(self, widget, cols):
@@ -271,8 +319,7 @@ class HViewport(Widget):
         return (widget_rows, self.cols)
 
     def print_tree(self, indent = 0):
-        super().print_tree(indent)
-        self.widget.print_tree(indent + 1)
+        self.widget.print_tree(indent)
 
 class VViewport(transpose_widget(HViewport)):
     pass
@@ -350,17 +397,16 @@ class Column(transpose_widget(Row)):
 class RowLayout(transpose_widget(ColumnLayout)):
     pass
 
-class Pager(Widget):
-    def __init__(self, widget):
-        super().__init__()
-        self.widget = widget
+class Pager(VContainer):
+    def __init__(self, children):
+        super().__init__(children)
         self.vscroll = 0
         self.hscroll = 0
         self.last_render_rows = None
 
     def render(self, screen, y, x, i, j, rows, cols):
         self.last_render_rows = rows
-        return self.widget.render(screen, y, x, i + self.vscroll, j + self.hscroll, rows, cols)
+        return super().render(screen, y, x, i + self.vscroll, j + self.hscroll, rows, cols)
 
     def next_page(self):
         rows, _ = self.size
@@ -368,7 +414,3 @@ class Pager(Widget):
 
     def prev_page(self):
         self.vscroll = max(self.vscroll - self.last_render_rows, 0)
-
-    @property
-    def size(self):
-        return self.widget.size
