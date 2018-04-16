@@ -88,8 +88,15 @@ class HViewport(tulip.Widget):
     def print_tree(self, indent = 0):
         self.widget.print_tree(indent)
 
-class VViewport(tulip.transpose_widget(HViewport)):
-    pass
+    # TODO
+    @property
+    def visible(self):
+        return self.widget.visible
+
+    # TODO
+    @visible.setter
+    def visible(self, visible):
+        self.widget.visible = visible
 
 class Row(CellGroup, tulip.HContainer):
     def __init__(self, children = None):

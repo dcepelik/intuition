@@ -9,6 +9,7 @@ class Widget(tulip.KeypressMixin):
         self.last_render_x = None
         self.last_render_rows = None
         self.last_render_cols = None
+        self._visible = None
 
     def transpose(self):
         return TransposedWrapper(self)
@@ -49,6 +50,9 @@ class Widget(tulip.KeypressMixin):
             self.parent.focused_child = self
             self.parent.focus()
 
+    def handle_focus_changed(self, focused):
+        pass
+
     @property
     def is_focused(self):
         if self.parent:
@@ -67,6 +71,19 @@ class Widget(tulip.KeypressMixin):
         if self.parent:
             return self.parent.lookup(typ)
         raise RuntimeError("Requested predecessor of type {} not found".format(typ))
+
+    @property
+    def visible(self):
+        return self._visible
+
+    @visible.setter
+    def visible(self, visible):
+        if self._visible != visible:
+            self._visible = visible
+            self.handle_visibility_changed()
+
+    def handle_visibility_changed(self):
+        print("{}: {}".format(self, self.visible))
 
 def swap_axes(yx):
     y, x = yx
@@ -118,6 +135,16 @@ class Wrapper(Widget):
 
     def focus(self):
         self.widget.focus()
+
+    # TODO
+    @property
+    def visible(self):
+        return self.widget.visible
+
+    # TODO
+    @visible.setter
+    def visible(self, visible):
+        self.widget.visible = visible
 
 class TransposedWrapper(transpose_widget(Wrapper)):
     pass

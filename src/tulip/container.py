@@ -1,16 +1,28 @@
 import tulip
 
 class Container(tulip.Widget):
-    def __init__(self, children = None):
+    def __init__(self, children = []):
         super().__init__()
-        self._children = children or []
-        for child in self._children:
-            child.parent = self
-        self.focused_child = None
+        self._children = []
+        for child in children:
+            self.add_child(child)
+        self._focused_child = None
+        self.last_render_visible = set()
 
     @property
     def rendered_widgets(self):
         return self._children
+
+    @property
+    def focused_child(self):
+        return self._focused_child
+
+    @focused_child.setter
+    def focused_child(self, new):
+        if self._focused_child:
+            self._focused_child.handle_focus_changed(False)
+        new.handle_focus_changed(True)
+        self._focused_child = new
 
     def add_child(self, child):
         self._children.append(child)
@@ -52,14 +64,23 @@ class HContainer(Container):
 
         max_rows = 0
         total_cols = 0
+        visible = set()
         for widget in widgets:
             widget_rows, widget_cols = widget.render(screen, y, x, i, j, rows, cols - total_cols)
+            visible.add(widget)
             j = 0
             x += widget_cols
             total_cols += widget_cols
             max_rows = max(max_rows, widget_rows)
             if total_cols >= cols:
                 break
+
+        for widget in self.last_render_visible - visible:
+            widget.visible = False
+        for widget in visible - self.last_render_visible:
+            widget.visible = True
+        self.last_render_visible = visible
+        print("===")
 
         return (max_rows, total_cols)
 

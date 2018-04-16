@@ -1,5 +1,6 @@
 import unittest
-from layout import *
+from tulip import *
+from tulip.layout import HViewport, VAlign, HAlign
 
 class SoupUITestCase(unittest.TestCase):
     def assertScreenContent(self, screen, rows):
@@ -111,17 +112,17 @@ class VContainerTest(SoupUITestCase):
 
 class ColumnLayoutTest(SoupUITestCase):
     def test_render(self):
-        layout = ColumnLayout()
-        layout.add_cell(Cell())
-        layout.add_cell(Cell())
-        layout.add_cell(Cell())
-        layout.add_cell(Cell())
-        layout.add_child(Row([Text('1'), Text('2'), Text('veryveryverylong'), Text('4')]))
-        layout.add_child(Row([HViewport(Text('4'), 2), Text('world'), Text('6'), Text('7')]))
-        layout.add_child(Row([Text('hello'), Text('5'), Text('6'), Text('7')]))
+        tulip = ColumnLayout()
+        tulip.add_cell(Cell())
+        tulip.add_cell(Cell())
+        tulip.add_cell(Cell())
+        tulip.add_cell(Cell())
+        tulip.add_child(Row([Text('1'), Text('2'), Text('veryveryverylong'), Text('4')]))
+        tulip.add_child(Row([HViewport(Text('4'), 2), Text('world'), Text('6'), Text('7')]))
+        tulip.add_child(Row([Text('hello'), Text('5'), Text('6'), Text('7')]))
 
         screen = MockScreen(10, 40)
-        self.assertEqual(layout._render(screen, 0, 0, 0, 0, 10, 40), (3, 27))
+        self.assertEqual(tulip._render(screen, 0, 0, 0, 0, 10, 40), (3, 27))
 
         self.assertScreenContent(screen, [
             '1    2    veryveryverylong4',
@@ -141,14 +142,14 @@ class TransposedCellTest(SoupUITestCase):
 
 class RowLayoutTest(SoupUITestCase):
     def test_render(self):
-        layout = RowLayout()
-        layout.add_cell(Cell())
-        layout.add_cell(Cell())
-        layout.add_child(Column([VContainer([Text('aaaaa'), Text('aaaaa')]), Text('bbbbb')]))
-        layout.add_child(Column([Text('ccccc'), VContainer([Text('ddddd'), Text('ddddd')])]))
+        tulip = RowLayout()
+        tulip.add_cell(Cell())
+        tulip.add_cell(Cell())
+        tulip.add_child(Column([VContainer([Text('aaaaa'), Text('aaaaa')]), Text('bbbbb')]))
+        tulip.add_child(Column([Text('ccccc'), VContainer([Text('ddddd'), Text('ddddd')])]))
 
         screen = MockScreen(10, 40)
-        self.assertEqual(layout._render(screen, 0, 0, 0, 0, 10, 40), (4, 10))
+        self.assertEqual(tulip._render(screen, 0, 0, 0, 0, 10, 40), (4, 10))
 
         self.assertScreenContent(screen, [
             'aaaaaccccc',
@@ -158,14 +159,14 @@ class RowLayoutTest(SoupUITestCase):
         ])
 
     def test_weighted_render(self):
-        layout = RowLayout()
-        layout.add_cell(Cell(weight=1))
-        layout.add_cell(Cell(weight=1))
-        layout.add_child(Column([Text('aaa'), Text('bbb')]))
-        layout.add_child(Column([VContainer([Text('ccc'), Text('ccc')]), Text('ddd')]))
+        tulip = RowLayout()
+        tulip.add_cell(Cell(weight=1))
+        tulip.add_cell(Cell(weight=1))
+        tulip.add_child(Column([Text('aaa'), Text('bbb')]))
+        tulip.add_child(Column([VContainer([Text('ccc'), Text('ccc')]), Text('ddd')]))
 
         screen = MockScreen(6, 40)
-        self.assertEqual(layout._render(screen, 0, 0, 0, 0, screen.nrows, screen.ncols), (6, 6))
+        self.assertEqual(tulip._render(screen, 0, 0, 0, 0, screen.nrows, screen.ncols), (6, 6))
         self.assertScreenContent(screen, [
             'aaaccc',
             '   ccc',

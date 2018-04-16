@@ -5,6 +5,7 @@ class Pager(tulip.VContainer):
         super().__init__(children)
         self.vscroll = 0
         self.hscroll = 0
+        self.follow_focus = True
 
     def _render(self, screen, y, x, i, j, rows, cols):
         return super()._render(screen, y, x, i + self.vscroll, j + self.hscroll, rows, cols)

@@ -80,6 +80,7 @@ while True:
     sys.stdout.write("\033[H\033[J")
     screen.clear()
     window.render(screen, 0, 0, 0, 0, screen.nrows, screen.ncols)
+    print("---")
     print(screen)
     print("Focused:")
     window.find_focused_leaf().print_tree(1)
@@ -91,10 +92,10 @@ while True:
     elif ch == 'K':
         pager.prev_page()
     elif ch == 'j':
-        print("Succ:")
         foc_succ = window.find_focused_leaf().find_focusable_successor()
         if foc_succ:
             foc_succ.focus()
+        else:
+            window.find_first_leaf().focus()
     else:
         window.find_focused_leaf().keypress(ch)
-    read_char()
