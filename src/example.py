@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 import tulip
+import flowers
 
 screen = tulip.MockScreen(20, 80)
 
@@ -16,6 +17,14 @@ class ThreadLine(tulip.Row):
         self.add_child(tulip.Text('  '))
         self.add_child(tulip.Text(subject))
         self.focusable = True
+        self.register_key_handler('m', self.do_m, 'do m, baby')
+
+    def do_m(self, key):
+        self.print_keys_help()
+
+    def print_keys_help(self):
+        for key, (handler, help_msg) in self.key_handlers.items():
+            print("{}    {}".format(key, help_msg))
 
 class ThreadView(tulip.ColumnLayout):
     def __init__(self):
@@ -86,3 +95,6 @@ while True:
         foc_succ = window.find_focused_leaf().find_focusable_successor()
         if foc_succ:
             foc_succ.focus()
+    else:
+        window.find_focused_leaf().keypress(ch)
+    read_char()

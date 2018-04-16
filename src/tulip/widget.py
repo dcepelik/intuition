@@ -1,7 +1,8 @@
 import tulip
 
-class Widget:
+class Widget(tulip.KeypressMixin):
     def __init__(self):
+        super().__init__()
         self.parent = None
         self.focusable = False
         self.last_render_y = None
