@@ -13,8 +13,8 @@ def swap_axes(yx):
 def transpose_widget(widget_class):
     class TransposedWidgetClass(widget_class):
         @property
-        def children(self):
-            return [child.transpose() for child in super().children]
+        def rendered_widgets(self):
+            return [child.transpose() for child in super().rendered_widgets]
 
         def render(self, screen, y, x, i, j, rows, cols):
             return swap_axes(super().render(screen, x, y, j, i, cols, rows))
@@ -90,8 +90,8 @@ class Wrapper(Widget):
         return TransposedWrapper(self)
 
     @property 
-    def children(self):
-        return self.widget.children
+    def rendered_widgets(self):
+        return self.widget.rendered_widgets
 
     def render(self, screen, y, x, i, j, rows, cols):
         return self.widget.render(screen, y, x, i, j, rows, cols)
@@ -167,7 +167,7 @@ class Container(Widget):
         self.focused_child = None
 
     @property
-    def children(self):
+    def rendered_widgets(self):
         return self._children
 
     def add_child(self, child):
@@ -199,23 +199,23 @@ class HContainer(Container):
     """
 
     def render(self, screen, y, x, i, j, rows, cols):
-        children = iter(self.children)
-        for child in children:
-            child_rows, child_cols = child.size
-            if child_cols > j:
-                children = itertools.chain([child], children)
+        widgets = iter(self.rendered_widgets)
+        for widget in widgets:
+            widget_rows, widget_cols = widget.size
+            if widget_cols > j:
+                widgets = itertools.chain([widget], widgets)
                 break
-            j -= child_cols # TODO don't override `j'
+            j -= widget_cols # TODO don't override `j'
             assert j >= 0
 
         max_rows = 0
         total_cols = 0
-        for child in children:
-            child_rows, child_cols = child.render(screen, y, x, i, j, rows, cols - total_cols)
+        for widget in widgets:
+            widget_rows, widget_cols = widget.render(screen, y, x, i, j, rows, cols - total_cols)
             j = 0
-            x += child_cols
-            total_cols += child_cols
-            max_rows = max(max_rows, child_rows)
+            x += widget_cols
+            total_cols += widget_cols
+            max_rows = max(max_rows, widget_rows)
             if total_cols >= cols:
                 break
 
@@ -225,10 +225,10 @@ class HContainer(Container):
     def size(self):
         total_cols = 0
         max_rows = 0
-        for child in self.children:
-            child_rows, child_cols = child.size
-            total_cols += child_cols
-            max_rows = max(max_rows, child_rows)
+        for widget in self.rendered_widgets:
+            widget_rows, widget_cols = widget.size
+            total_cols += widget_cols
+            max_rows = max(max_rows, widget_rows)
         return (max_rows, total_cols)
 
 class VContainer(transpose_widget(HContainer)):
@@ -333,8 +333,8 @@ class Row(CellGroup, HContainer):
         super().__init__(children or [])
 
     @property
-    def children(self):
-        return [HViewport(child, self.layout.cells[idx].width) for idx, child in enumerate(super().children)]
+    def rendered_widgets(self):
+        return [HViewport(widget, self.layout.cells[idx].width) for idx, widget in enumerate(super().rendered_widgets)]
 
 class Layout:
     def __init__(self):
@@ -362,7 +362,7 @@ class ColumnLayout(Layout, VContainer):
     def find_max_over_columns(self):
         cell_max_cols = [0] * len(self.cells)
         for child in self._children:
-            for idx, content in enumerate(child.children):
+            for idx, content in enumerate(child.rendered_widgets):
                 _, cell_cols = content.size
                 cell_max_cols[idx] = max(cell_max_cols[idx], cell_cols)
         return cell_max_cols
@@ -386,6 +386,7 @@ class ColumnLayout(Layout, VContainer):
         cell_max_cols = self.find_max_over_columns()
         cols = sum(cell_max_cols)
         rows = 0
+        # TODO Did I mean rendered_widgets?
         for child in self._children:
             child_rows, _ = child.size
             rows += child_rows
