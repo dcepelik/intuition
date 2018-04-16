@@ -28,6 +28,7 @@ def transpose_widget(widget_class):
 class Widget:
     def __init__(self):
         self.parent = None
+        self.focusable = False
 
     def transpose(self):
         return TransposedWrapper(self)
@@ -40,6 +41,7 @@ class Widget:
         print_indented("{} (size={})".format(
             self.__class__.__name__, self.size if hasattr(self, 'size') else '?'), indent)
 
+    # TODO make prop
     def successor(self):
         widget = self
         while widget.parent != None:
@@ -49,6 +51,17 @@ class Widget:
             else:
                 widget = widget.parent
         return None
+
+    # TODO make prop
+    def focusable_successor(self):
+        widget = self
+        while True: # TODO do .. while
+            widget = widget.successor()
+            if not widget:
+                return None
+            if widget.focusable:
+                break
+        return widget
 
     def focus(self):
         if self.parent:
@@ -180,7 +193,9 @@ class Container(Widget):
 
     @property
     def focused_leaf(self):
-        return self.focused_child.focused_leaf
+        if self.focused_child:
+            return self.focused_child.focused_leaf
+        return self
 
     @property
     def first_leaf(self):

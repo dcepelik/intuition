@@ -15,6 +15,7 @@ class ThreadLine(layout.Row):
         self.add_child(layout.Text(sender))
         self.add_child(layout.Text('  '))
         self.add_child(layout.Text(subject))
+        self.focusable = True
 
 class ThreadView(layout.ColumnLayout):
     def __init__(self):
@@ -82,4 +83,6 @@ while True:
         pager.prev_page()
     elif ch == 'j':
         print("Succ:")
-        window.focused_leaf.successor().first_leaf.focus()
+        foc_succ = window.focused_leaf.focusable_successor()
+        if foc_succ:
+            foc_succ.focus()
