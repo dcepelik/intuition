@@ -19,13 +19,13 @@ class TextTest(SoupUITestCase):
         text = Text('hello')
         screen = MockScreen(1, 10)
 
-        self.assertEqual(text._render(screen, 0, 0, 0, 0, 1, 10), (1, 5))
+        self.assertEqual(text.render(screen, 0, 0, 0, 0, 1, 10), (1, 5))
         self.assertScreenContent(screen, ['hello'])
 
-        self.assertEqual(text._render(screen, 0, 0, 0, 0, 0, 10), (0, 0))
+        self.assertEqual(text.render(screen, 0, 0, 0, 0, 0, 10), (0, 0))
         self.assertScreenContent(screen, [''])
 
-        self.assertEqual(text._render(screen, 0, 0, 0, 4, 1, 1), (1, 1))
+        self.assertEqual(text.render(screen, 0, 0, 0, 4, 1, 1), (1, 1))
         self.assertScreenContent(screen, ['o'])
 
 class FixedSizeWidget(Widget):
@@ -33,7 +33,7 @@ class FixedSizeWidget(Widget):
     def size(self):
         return (2, 4)
 
-    def _render(self):
+    def render(self):
         return self.size
 
 class TransposedWidgetTest(SoupUITestCase):
@@ -51,10 +51,10 @@ class HContainerTest(SoupUITestCase):
 
     def test_renders_basic_hcont(self):
         screen = MockScreen(1, 10)
-        self.assertEqual(HContainer([])._render(screen, 0, 0, 0, 0, 100, 100), (0, 0))
+        self.assertEqual(HContainer([]).render(screen, 0, 0, 0, 0, 100, 100), (0, 0))
         self.assertScreenContent(screen, [''])
 
-        self.assertEqual(HContainer([Text('hello')])._render(screen, 0, 0, 0, 0, 100, 100), (1, 5))
+        self.assertEqual(HContainer([Text('hello')]).render(screen, 0, 0, 0, 0, 100, 100), (1, 5))
         self.assertScreenContent(screen, ['hello'])
 
     def test_renders_partial_hcont(self):
@@ -66,16 +66,16 @@ class HContainerTest(SoupUITestCase):
             Text('not rendered')
         ])
 
-        self.assertEqual(hcont._render(screen, 0, 0, 0, 8, 1, 5), (1, 5))
+        self.assertEqual(hcont.render(screen, 0, 0, 0, 8, 1, 5), (1, 5))
         self.assertScreenContent(screen, ['ellow'])
 
-        self.assertEqual(hcont._render(screen, 0, 0, 0, 0, 1, 1), (1, 1))
+        self.assertEqual(hcont.render(screen, 0, 0, 0, 0, 1, 1), (1, 1))
         self.assertScreenContent(screen, ['s'])
 
-        self.assertEqual(hcont._render(screen, 1, 1, 0, 1, 1, 10), (1, 10))
+        self.assertEqual(hcont.render(screen, 1, 1, 0, 1, 1, 10), (1, 10))
         self.assertScreenContent(screen, ['', ' kippedhell'])
 
-        self.assertEqual(HContainer([Text('hello')])._render(screen, 0, 0, 1, 0, 10, 10), (0, 0))
+        self.assertEqual(HContainer([Text('hello')]).render(screen, 0, 0, 1, 0, 10, 10), (0, 0))
         self.assertScreenContent(screen, [])
 
 class VContainerTest(SoupUITestCase):
@@ -92,10 +92,10 @@ class VContainerTest(SoupUITestCase):
     def test_render(self):
         screen = MockScreen(10, 10)
 
-        self.assertEqual(VContainer([Text('hello')])._render(screen, 0, 0, 0, 0, 1, 5), (1, 5))
+        self.assertEqual(VContainer([Text('hello')]).render(screen, 0, 0, 0, 0, 1, 5), (1, 5))
         self.assertScreenContent(screen, ['hello'])
 
-        self.assertEqual(VContainer([Text('hello'), Text('world')])._render(screen, 0, 0, 0, 0, 10, 5), (2, 5))
+        self.assertEqual(VContainer([Text('hello'), Text('world')]).render(screen, 0, 0, 0, 0, 10, 5), (2, 5))
         self.assertScreenContent(screen, ['hello', 'world'])
 
         vcont = VContainer([
@@ -104,10 +104,10 @@ class VContainerTest(SoupUITestCase):
             Text('ccc'),
             Text('ddddd')
         ])
-        self.assertEqual(vcont._render(screen, 0, 0, 0, 1, 4, 10), (3, 5))
+        self.assertEqual(vcont.render(screen, 0, 0, 0, 1, 4, 10), (3, 5))
         self.assertScreenContent(screen, ['bbbbb', 'cc', 'dddd'])
 
-        self.assertEqual(vcont._render(screen, 0, 0, 0, 3, 4, 10), (2, 3))
+        self.assertEqual(vcont.render(screen, 0, 0, 0, 3, 4, 10), (2, 3))
         self.assertScreenContent(screen, ['bbb', 'dd'])
 
 class ColumnLayoutTest(SoupUITestCase):
@@ -122,7 +122,7 @@ class ColumnLayoutTest(SoupUITestCase):
         tulip.add_child(Row([Text('hello'), Text('5'), Text('6'), Text('7')]))
 
         screen = MockScreen(10, 40)
-        self.assertEqual(tulip._render(screen, 0, 0, 0, 0, 10, 40), (3, 27))
+        self.assertEqual(tulip.render(screen, 0, 0, 0, 0, 10, 40), (3, 27))
 
         self.assertScreenContent(screen, [
             '1    2    veryveryverylong4',
@@ -149,7 +149,7 @@ class RowLayoutTest(SoupUITestCase):
         tulip.add_child(Column([Text('ccccc'), VContainer([Text('ddddd'), Text('ddddd')])]))
 
         screen = MockScreen(10, 40)
-        self.assertEqual(tulip._render(screen, 0, 0, 0, 0, 10, 40), (4, 10))
+        self.assertEqual(tulip.render(screen, 0, 0, 0, 0, 10, 40), (4, 10))
 
         self.assertScreenContent(screen, [
             'aaaaaccccc',
@@ -166,7 +166,7 @@ class RowLayoutTest(SoupUITestCase):
         tulip.add_child(Column([VContainer([Text('ccc'), Text('ccc')]), Text('ddd')]))
 
         screen = MockScreen(6, 40)
-        self.assertEqual(tulip._render(screen, 0, 0, 0, 0, screen.nrows, screen.ncols), (6, 6))
+        self.assertEqual(tulip.render(screen, 0, 0, 0, 0, screen.nrows, screen.ncols), (6, 6))
         self.assertScreenContent(screen, [
             'aaaccc',
             '   ccc',

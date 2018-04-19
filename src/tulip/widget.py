@@ -1,5 +1,9 @@
 import tulip
 
+def swap_axes(yx):
+    y, x = yx
+    return (x, y)
+
 class Widget(tulip.KeypressMixin):
     def __init__(self):
         super().__init__()
@@ -81,10 +85,6 @@ class Widget(tulip.KeypressMixin):
     @visible.setter
     def visible(self, visible):
         self._visible = visible
-
-def swap_axes(yx):
-    y, x = yx
-    return (x, y)
 
 def transpose_widget(widget_class):
     class TransposedWidgetClass(widget_class):
