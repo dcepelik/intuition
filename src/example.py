@@ -83,6 +83,8 @@ while True:
     print("---")
     print(screen)
     print("Focused:")
+    for i, tl in enumerate(threads._children):
+        print("#{}: {}".format(i, tl.visible))
     window.find_focused_leaf().print_tree(1)
     ch = read_char()
     if ch == 'q':

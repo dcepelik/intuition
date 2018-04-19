@@ -9,7 +9,7 @@ class Widget(tulip.KeypressMixin):
         self.last_render_x = None
         self.last_render_rows = None
         self.last_render_cols = None
-        self._visible = None
+        self._visible = False
 
     def transpose(self):
         return TransposedWrapper(self)
@@ -74,16 +74,13 @@ class Widget(tulip.KeypressMixin):
 
     @property
     def visible(self):
-        return self._visible
+        if not self.parent:
+            return self._visible
+        return self._visible and self.parent.visible
 
     @visible.setter
     def visible(self, visible):
-        if self._visible != visible:
-            self._visible = visible
-            self.handle_visibility_changed()
-
-    def handle_visibility_changed(self):
-        print("{}: {}".format(self, self.visible))
+        self._visible = visible
 
 def swap_axes(yx):
     y, x = yx
@@ -114,7 +111,7 @@ class Wrapper(Widget):
 
     @property 
     def rendered_widgets(self):
-        return self.widget.rendered_widgets
+        return self.widget
 
     def _render(self, screen, y, x, i, j, rows, cols):
         return self.widget.render(screen, y, x, i, j, rows, cols)
@@ -136,12 +133,10 @@ class Wrapper(Widget):
     def focus(self):
         self.widget.focus()
 
-    # TODO
     @property
     def visible(self):
         return self.widget.visible
 
-    # TODO
     @visible.setter
     def visible(self, visible):
         self.widget.visible = visible

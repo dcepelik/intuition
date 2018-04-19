@@ -7,7 +7,7 @@ class Container(tulip.Widget):
         for child in children:
             self.add_child(child)
         self._focused_child = None
-        self.last_render_visible = set()
+        self.visible_widgets = set()
 
     @property
     def rendered_widgets(self):
@@ -53,34 +53,31 @@ class HContainer(Container):
     """
 
     def _render(self, screen, y, x, i, j, rows, cols):
+        self.visible = True
+        while self.visible_widgets:
+            self.visible_widgets.pop().visible = False
+
         widgets = iter(self.rendered_widgets)
         for widget in widgets:
             widget_rows, widget_cols = widget.size
             if widget_cols > j:
                 widgets = itertools.chain([widget], widgets)
                 break
-            j -= widget_cols # TODO don't override `j'
+            widget.visible = False
+            j -= widget_cols
             assert j >= 0
 
         max_rows = 0
         total_cols = 0
-        visible = set()
         for widget in widgets:
+            self.visible_widgets.add(widget)
             widget_rows, widget_cols = widget.render(screen, y, x, i, j, rows, cols - total_cols)
-            visible.add(widget)
             j = 0
             x += widget_cols
             total_cols += widget_cols
             max_rows = max(max_rows, widget_rows)
             if total_cols >= cols:
                 break
-
-        for widget in self.last_render_visible - visible:
-            widget.visible = False
-        for widget in visible - self.last_render_visible:
-            widget.visible = True
-        self.last_render_visible = visible
-        print("===")
 
         return (max_rows, total_cols)
 
