@@ -15,6 +15,10 @@ class Widget(tulip.KeypressMixin):
         self.last_render_cols = None
         self._visible = False
 
+    @property
+    def resulting_classes(self):
+        return self.classes + self.parent.resulting_classes
+
     def transpose(self):
         return TransposedWrapper(self)
 

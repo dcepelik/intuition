@@ -12,7 +12,7 @@ class Text(tulip.Widget):
     def _render(self, screen, y, x, i, j, rows, cols):
         end = j + cols
         text = '' if i > 0 or rows == 0 else self.text[j:end]
-        screen.put(y, x, text)
+        screen.put(y, x, text, [])
         cols = len(text)
         rows = 1 if cols else 0
         return (rows, cols)
