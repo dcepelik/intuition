@@ -15,7 +15,7 @@ class Text(tulip.Widget):
         screen.put(y, x, text, [])
         cols = len(text)
         rows = 1 if cols else 0
-        return (rows, cols)
+        return (cols, rows) if isinstance(screen, tulip.SwappedAxesScreen) else (rows, cols) # TODO
 
     def print_tree(self, indent = 0):
         tulip.print_indented("Text ('{}')".format(self.text), indent)

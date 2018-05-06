@@ -46,52 +46,54 @@ class Container(tulip.Widget):
             return self._children[0].find_first_leaf()
         return None
 
-import itertools
+    def _render(self, screen, yx, ij, rows_cols, a, b):
+        rstart = 0
+        for idx, widget in enumerate(self.rendered_widgets):
+            size = widget.size
+            if size[b] > ij[b]:
+                rstart = idx
+                break
+            ij[b] -= size[b]
+            assert ij[b] >= 0
+
+        total_size = [0, 0]
+        for widget in self.rendered_widgets[rstart:]:
+            size = widget.render(screen, yx[0], yx[1], ij[0], ij[1], rows_cols[0], rows_cols[1])
+            yx[b] += size[b]
+            ij[b] = 0
+            total_size[a] = max(total_size[a], size[a])
+            total_size[b] += size[b]
+            rows_cols[b] -= size[b]
+            if rows_cols[b] <= 0:
+                break
+        return (total_size[0], total_size[1])
+
+    def _size(self, a, b):
+        total_size = [0, 0]
+        for widget in self.rendered_widgets:
+            size = widget.size
+            total_size[a] = max(total_size[a], size[a])
+            total_size[b] += size[b]
+        return (total_size[0], total_size[1])
 
 class HContainer(Container):
     """Renders widgets horizontally from left to right.
     """
 
     def _render(self, screen, y, x, i, j, rows, cols):
-        self.visible = True
-        while self.visible_widgets:
-            self.visible_widgets.pop().visible = False
-
-        widgets = iter(self.rendered_widgets)
-        for widget in widgets:
-            widget_rows, widget_cols = widget.size
-            if widget_cols > j:
-                widgets = itertools.chain([widget], widgets)
-                break
-            widget.visible = False
-            j -= widget_cols
-            assert j >= 0
-
-        max_rows = 0
-        total_cols = 0
-        for widget in widgets:
-            self.visible_widgets.add(widget)
-            widget_rows, widget_cols = widget.render(screen, y, x, i, j, rows, cols - total_cols)
-            j = 0
-            x += widget_cols
-            total_cols += widget_cols
-            max_rows = max(max_rows, widget_rows)
-            if total_cols >= cols:
-                break
-
-        return (max_rows, total_cols)
+        return super()._render(screen, [y, x], [i, j], [rows, cols], 0, 1)
 
     @property
     def size(self):
-        total_cols = 0
-        max_rows = 0
-        for widget in self.rendered_widgets:
-            widget_rows, widget_cols = widget.size
-            total_cols += widget_cols
-            max_rows = max(max_rows, widget_rows)
-        return (max_rows, total_cols)
+        return super()._size(0, 1)
 
-class VContainer(tulip.transpose_widget(HContainer)):
+class VContainer(Container):
     """Renders widgets vertically from top to bottom.
     """
-    pass
+    
+    def _render(self, screen, y, x, i, j, rows, cols):
+        return super()._render(screen, [y, x], [i, j], [rows, cols], 1, 0)
+
+    @property
+    def size(self):
+        return super()._size(1, 0)

@@ -13,11 +13,16 @@ class Widget(tulip.KeypressMixin):
         self.last_render_x = None
         self.last_render_rows = None
         self.last_render_cols = None
+        self.classes = []
         self._visible = False
 
     @property
     def resulting_classes(self):
         return self.classes + self.parent.resulting_classes
+
+    @property
+    def add_class(self, name):
+        self.classes.append(name)
 
     def transpose(self):
         return TransposedWrapper(self)
@@ -32,6 +37,8 @@ class Widget(tulip.KeypressMixin):
     def _render(self, screen, y, x, i, j, rows, cols):
         raise NotImplementedError('{} must implement the _render() method'.format(
             self.__class__.__name__))
+
+    # TODO shout when size not defined
 
     def print_tree(self, indent = 0):
         tulip.print_indented("{} (size={})".format(
@@ -90,22 +97,7 @@ class Widget(tulip.KeypressMixin):
     def visible(self, visible):
         self._visible = visible
 
-def transpose_widget(widget_class):
-    class TransposedWidgetClass(widget_class):
-        @property
-        def rendered_widgets(self):
-            return [child.transpose() for child in super().rendered_widgets]
-
-        def _render(self, screen, y, x, i, j, rows, cols):
-            return swap_axes(super()._render(screen, x, y, j, i, cols, rows))
-
-        @property
-        def size(self):
-            return swap_axes(super().size)
-
-    return TransposedWidgetClass
-
-class Wrapper(Widget):
+class Wrapper:
     def __init__(self, widget):
         super().__init__()
         self.widget = widget
@@ -119,6 +111,9 @@ class Wrapper(Widget):
 
     def _render(self, screen, y, x, i, j, rows, cols):
         return self.widget.render(screen, y, x, i, j, rows, cols)
+
+    def render(self, screen, y, x, i, j, rows, cols):
+        return self._render(screen, y, x, i, j, rows, cols)
 
     @property
     def size(self):
@@ -144,6 +139,25 @@ class Wrapper(Widget):
     @visible.setter
     def visible(self, visible):
         self.widget.visible = visible
+
+    @property
+    def resulting_classes(self):
+        return self.widget.resulting_classes
+
+def transpose_widget(widget_class):
+    class TransposedWidgetClass(widget_class):
+        @property
+        def rendered_widgets(self):
+            return [child.transpose() for child in super().rendered_widgets]
+
+        def _render(self, screen, y, x, i, j, rows, cols):
+            return swap_axes(super()._render(screen, x, y, j, i, cols, rows))
+
+        @property
+        def size(self):
+            return swap_axes(super().size)
+
+    return TransposedWidgetClass
 
 class TransposedWrapper(transpose_widget(Wrapper)):
     pass

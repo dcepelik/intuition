@@ -6,7 +6,7 @@ def print_indented(string, indent):
 from tulip.keypress import KeypressMixin
 from tulip.widget import Widget, TransposedWrapper, transpose_widget
 from tulip.container import Container, HContainer, VContainer
-from tulip.screen import MockScreen
+from tulip.screen import MockScreen, SwappedAxesScreen
 from tulip.layout import Cell, CellGroup, Row, ColumnLayout, Column, RowLayout
 from tulip.pager import Pager
 from tulip.text import Text
