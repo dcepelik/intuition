@@ -61,7 +61,7 @@ class Container(tulip.Widget):
                 rstart = idx
                 break
             ij[b] -= widget.size[b]
-            assert ij[b] > 0
+            assert ij[b] >= 0
 
         # render widgets which fall into the visible area (idx >= rstart), calculate total size
         total_size = [0, 0]
@@ -76,7 +76,7 @@ class Container(tulip.Widget):
                 break
         return tuple(total_size)
 
-    def _measure_generic(self, a, b):
+    def _size_generic(self, a, b):
         """Returns size when rendered horizontally or vertically (depending on a and b).
         """
 
@@ -96,7 +96,7 @@ class HContainer(Container):
 
     @property
     def size(self):
-        return super()._measure_generic(0, 1)
+        return super()._size_generic(0, 1)
 
 class VContainer(Container):
     """Renders widgets vertically from top to bottom.
@@ -107,4 +107,4 @@ class VContainer(Container):
 
     @property
     def size(self):
-        return super()._measure_generic(1, 0)
+        return super()._size_generic(1, 0)

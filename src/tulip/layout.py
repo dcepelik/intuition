@@ -108,51 +108,64 @@ class Layout:
     def add_cell(self, cell):
         self._cells.append(cell)
 
+    def _max_cell_size_generic(self, b):
+        cell_size = [0] * len(self.cells)
+        for cell_group in self._children:
+            for idx, cell_content in enumerate(cell_group.rendered_widgets):
+                cell_size[idx] = max(cell_size[idx], cell_content.size[b])
+        return cell_size
+
+    def _set_cell_sizes_generic(self, target_size, b):
+        max_cell_size = self._max_cell_size_generic(b)
+        cells_total = sum(max_cell_size)
+        for idx, cell in enumerate(self.cells):
+            cell_size = [cell.height, cell.width]
+            cell_max_size = [cell.max_height, cell.max_width]
+            cell_min_size = [cell.min_height, cell.min_width]
+            cell_size[b] = 0 if cell.weight > 0 else max_cell_size[idx]
+            cell_size[b] = max(cell_min_size[b], min(cell_max_size[b], cell_size[b]))
+            cell_size[b] = min(cell_size[b], target_size)
+            cell.height = cell_size[0]
+            cell.width = cell_size[1]
+        avail_size = target_size - sum((cell.height, cell.width)[b] for cell in self.cells)
+        if avail_size > 0:
+            sum_weight = sum(cell.weight for cell in self.cells)
+            # why the hell is `cell` defined in this scope?
+            for cell in self.cells:
+                cell_size = [cell.height, cell.width]
+                if cell.weight > 0:
+                    cell_size[b] += int(avail_size * (float(cell.weight) / sum_weight))
+                    cell.height = cell_size[0]
+                    cell.width = cell_size[1]
+
+    def _size_generic(self, a, b):
+        sum_max_b = sum(self._max_cell_size_generic(b))
+        sum_a = sum(child.size[a] for child in self._children)
+        return (sum_a, sum_max_b)
+
+
 import math
 
 class ColumnLayout(Layout, tulip.VContainer):
     def __init__(self):
         super().__init__()
 
-    def find_max_over_columns(self):
-        cell_max_cols = [0] * len(self.cells)
-        for child in self._children:
-            for idx, content in enumerate(child.rendered_widgets):
-                _, cell_cols = content.size
-                cell_max_cols[idx] = max(cell_max_cols[idx], cell_cols)
-        return cell_max_cols
-
-    def calculate_size_of_cells(self, cols):
-        cell_max_cols = self.find_max_over_columns()
-        cells_total = sum(cell_max_cols)
-        for idx, cell in enumerate(self.cells):
-            cell.width = 0 if cell.weight > 0 else cell_max_cols[idx]
-            cell.width = max(cell.min_width, min(cell.max_width, cell.width))
-            cell.width = min(cell.width, cols)
-        avail_cols = cols - sum(cell.width for cell in self.cells)
-        if avail_cols > 0:
-            sum_weight = sum(cell.weight for cell in self.cells)
-            for cell in self.cells:
-                if cell.weight > 0:
-                    cell.width += int(avail_cols * (float(cell.weight) / sum_weight))
+    def _render(self, screen, y, x, i, j, rows, cols):
+        self._set_cell_sizes_generic(cols, 1)
+        return super()._render(screen, y, x, i, j, rows, cols)
 
     @property
     def size(self):
-        cell_max_cols = self.find_max_over_columns()
-        cols = sum(cell_max_cols)
-        rows = 0
-        # TODO Did I mean rendered_widgets?
-        for child in self._children:
-            child_rows, _ = child.size
-            rows += child_rows
-        return (rows, cols)
-
-    def _render(self, screen, y, x, i, j, rows, cols):
-        self.calculate_size_of_cells(cols)
-        return super()._render(screen, y, x, i, j, rows, cols)
+        return self._size_generic(0, 1)
 
 class Column(tulip.transpose_widget(Row)):
     pass
 
 class RowLayout(tulip.transpose_widget(ColumnLayout)):
-    pass
+    def _render(self, screen, y, x, i, j, rows, cols):
+        self._set_cell_sizes_generic(cols, 0)
+        return super()._render(screen, y, x, i, j, rows, cols)
+
+    @property
+    def size(self):
+        return self._size_generic(1, 0)
