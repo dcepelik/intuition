@@ -7,7 +7,10 @@ import notmuch
 screen = tulip.AnsiScreen(20, 120)
 
 class MainWindow(tulip.RowLayout):
-    pass
+    @property
+    def size(self):
+        print(super()._size_generic(1, 0))
+        return super().size
 
 threads_ui = tulip.ColumnLayout()
 threads_ui.add_cell(tulip.Cell(halign=tulip.HAlign.RIGHT))
@@ -19,7 +22,7 @@ threads_ui.add_cell(tulip.Cell())
 threads_ui.add_cell(tulip.Cell(weight=2))
 
 database = notmuch.Database()
-threads = database.create_query('tag:inbox and not tag:killed').search_threads()
+threads = database.create_query('tag:spam').search_threads()
 for t in threads:
     tags = tulip.Text(' '.join(['+' + u for u in t.get_tags()]))
     subj = tulip.Text(t.get_subject())
@@ -63,6 +66,7 @@ window.add_cell(tulip.Cell())
 window.add_child(tulip.Column([window_list, pager, statusbar]))
 
 window.find_first_leaf().focus()
+#window.print_tree()
 
 import sys, tty, termios
 
@@ -76,7 +80,12 @@ def read_char():
         termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
     return ch
 
+import cProfile, pstats, io
+from pstats import SortKey
+pr = cProfile.Profile()
+
 while True:
+    pr.enable()
     sys.stdout.write("\033[H\033[J")
     sys.stdout.flush()
     screen.clear()
@@ -86,13 +95,14 @@ while True:
     #for i, tl in enumerate(threads._children):
     #    print("#{}: {}".format(i, tl.visible))
     #window.find_focused_leaf().print_tree(1)
+    pr.disable()
     ch = read_char()
     if ch == 'q':
         break
-    #elif ch == 'J':
-    #    pager.next_page()
-    #elif ch == 'K':
-    #    pager.prev_page()
+    elif ch == 'J':
+        pager.next_page()
+    elif ch == 'K':
+        pager.prev_page()
     elif ch == 'j':
         cur = window.find_focused_leaf()
         foc_succ = cur.find_focusable_successor()
@@ -109,3 +119,9 @@ while True:
             window.find_last_leaf().focus()
     else:
         window.find_focused_leaf().keypress(ch)
+
+s = io.StringIO()
+sortby = SortKey.CUMULATIVE
+ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
+ps.print_stats()
+print(s.getvalue())

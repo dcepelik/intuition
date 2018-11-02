@@ -118,6 +118,12 @@ class ViewportTest(SoupUITestCase):
         self.assertEqual(vp.render(screen, 0, 0, 0, 2, 10, 10), (4, 2))
         self.assertScreenContent(screen, ['cd'])
 
+class F(SoupUITestCase):
+    def test_render(self):
+        h = HContainer([Box(10, 20)])
+        v = HContainer([Box(10, 20)])
+        self.assertEqual(h.size, v.size)
+
 class ColumnLayoutTest(SoupUITestCase):
     def test_render(self):
         tulip = ColumnLayout()

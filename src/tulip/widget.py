@@ -1,9 +1,5 @@
 import tulip
 
-def swap_axes(yx):
-    y, x = yx
-    return (x, y)
-
 class Widget(tulip.KeypressMixin):
     def __init__(self):
         super().__init__()
@@ -144,47 +140,3 @@ class Box(Widget):
     @property
     def size(self):
         return (self.rows, self.cols)
-
-class Wrapper:
-    def __init__(self, widget):
-        super().__init__()
-        self.widget = widget
-
-    @property 
-    def rendered_widgets(self):
-        return self.widget
-
-    def _render(self, screen, y, x, i, j, rows, cols):
-        return self.widget.render(screen, y, x, i, j, rows, cols)
-
-    def render(self, screen, y, x, i, j, rows, cols):
-        return self._render(screen, y, x, i, j, rows, cols)
-
-    @property
-    def size(self):
-        return self.widget.size
-
-    def print_tree(self, indent = 0):
-        return self.widget.print_tree(indent)
-
-    @property
-    def find_first_leaf(self):
-        return self.widget.find_first_leaf
-
-    def find_focused_leaf(self):
-        return self.widget.find_focused_leaf()
-
-    def focus(self):
-        self.widget.focus()
-
-    @property
-    def visible(self):
-        return self.widget.visible
-
-    @visible.setter
-    def visible(self, visible):
-        self.widget.visible = visible
-
-    @property
-    def resulting_classes(self):
-        return self.widget.resulting_classes

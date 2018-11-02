@@ -1,7 +1,3 @@
-- partial rendering
-- compact code base
-- ANSI themes
-- easy to build a TUI
 - basic features only
 - separate controls library
 - hierarchical widgets
