@@ -35,11 +35,12 @@ class CellGroup:
         return self.lookup(Layout)
 
 class Viewport(tulip.Widget):
-    def __init__(self, widget, rows=None, cols=None):
+    def __init__(self, widget, rows=None, cols=None, halign=HAlign.LEFT):
         super().__init__()
         self.widget = widget
         self.rows = rows
         self.cols = cols
+        self.halign = halign
 
     @property
     def size(self):
@@ -47,8 +48,18 @@ class Viewport(tulip.Widget):
         return (self.rows or widget_rows, self.cols or widget_cols) # TODO or: a bit of a hack
 
     def _render(self, screen, y, x, i, j, rows, cols):
+        widget_rows, widget_cols = self.widget.size
         r = self.rows or rows
         c = self.cols or cols
+        s = 0
+        if self.halign == HAlign.CENTER:
+            s = int(0.5 * (c - widget_cols))
+        elif self.halign == HAlign.RIGHT:
+            s = c - widget_cols
+        if s > 0:
+            x += s
+        else:
+            j += s
         widget_rows, widget_cols = self.widget.render(screen, y, x, i, j, r, c)
         return (self.rows or widget_rows, self.cols or widget_cols)
 
@@ -62,7 +73,11 @@ class Row(CellGroup, tulip.HContainer):
 
     @property
     def rendered_widgets(self):
-        return [Viewport(widget, cols=self.layout.cells[idx].width) for idx, widget in enumerate(super().rendered_widgets)]
+        widgets = []
+        for idx, w in enumerate(super().rendered_widgets):
+            c = self.layout.cells[idx]
+            widgets.append(Viewport(w, cols=c.width, halign=c.halign))
+        return widgets
 
 class Column(CellGroup, tulip.VContainer):
     def __init__(self, children = None):

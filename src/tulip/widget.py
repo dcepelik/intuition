@@ -103,6 +103,7 @@ class Widget(tulip.KeypressMixin):
 
 class Box(Widget):
     def __init__(self, rows, cols):
+        super().__init__()
         self.rows = rows
         self.cols = cols
 
