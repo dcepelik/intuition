@@ -19,8 +19,13 @@ class Widget(tulip.KeypressMixin):
     @property
     def resulting_classes(self):
         if not self.parent:
-            return self.classes
-        return self.classes + self.parent.resulting_classes
+            cls = self.classes
+        else:
+            cls = self.classes + self.parent.resulting_classes
+        focused = []
+        if self.is_focused and not self.focused_child:
+            focused.append('focused')
+        return cls + focused
 
     def add_class(self, name):
         self.classes.append(name)
@@ -28,8 +33,11 @@ class Widget(tulip.KeypressMixin):
     def remove_class(self, name):
         self.classes.remove(name)
 
-    def transpose(self):
-        return TransposedWrapper(self)
+    def toggle_class(self, name):
+        if name in self.classes:
+            self.remove_class(name)
+        else:
+            self.add_class(name)
 
     def render(self, screen, y, x, i, j, rows, cols):
         self.last_render_y = y
@@ -58,11 +66,31 @@ class Widget(tulip.KeypressMixin):
                 widget = widget.parent
         return None
 
+    def find_predecessor(self):
+        widget = self
+        while widget.parent != None:
+            sibling_idx = widget.parent._children.index(widget) - 1
+            if sibling_idx >= 0:
+                return widget.parent._children[sibling_idx]
+            else:
+                widget = widget.parent
+        return None
+
     def find_focusable_successor(self):
         succ = self.find_successor()
         while succ and not succ.focusable:
             succ = succ.find_successor()
         return succ
+
+    def find_focusable_predecessor(self):
+        pred = self.find_predecessor()
+        while pred and not pred.focusable:
+            pred = pred.find_predecessor()
+        return pred
+
+    @property
+    def focused_child(self):
+        return None
 
     def focus(self):
         if self.parent:
@@ -82,6 +110,9 @@ class Widget(tulip.KeypressMixin):
         return self
 
     def find_first_leaf(self):
+        return self
+
+    def find_last_leaf(self):
         return self
 
     def lookup(self, typ):
@@ -118,9 +149,6 @@ class Wrapper:
     def __init__(self, widget):
         super().__init__()
         self.widget = widget
-
-    def transpose(self):
-        return TransposedWrapper(self)
 
     @property 
     def rendered_widgets(self):
@@ -160,21 +188,3 @@ class Wrapper:
     @property
     def resulting_classes(self):
         return self.widget.resulting_classes
-
-def transpose_widget(widget_class):
-    class TransposedWidgetClass(widget_class):
-        @property
-        def rendered_widgets(self):
-            return [child.transpose() for child in super().rendered_widgets]
-
-        def _render(self, screen, y, x, i, j, rows, cols):
-            return swap_axes(super()._render(screen, x, y, j, i, cols, rows))
-
-        @property
-        def size(self):
-            return swap_axes(super().size)
-
-    return TransposedWidgetClass
-
-class TransposedWrapper(transpose_widget(Wrapper)):
-    pass

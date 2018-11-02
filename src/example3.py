@@ -52,8 +52,8 @@ statusbar.add_cell(tulip.Cell(weight=1, halign=tulip.HAlign.CENTER))
 statusbar.add_cell(tulip.Cell(weight=1, halign=tulip.HAlign.RIGHT))
 statusbar.add_child(tulip.Row([
     tulip.Text(':reply-all'),
-    tulip.Text('1/20'),
-    tulip.Text('1/405'),
+    tulip.Text('1p/20'),
+    tulip.Text('1m/405'),
 ]))
 
 window = MainWindow()
@@ -78,6 +78,7 @@ def read_char():
 
 while True:
     sys.stdout.write("\033[H\033[J")
+    sys.stdout.flush()
     screen.clear()
     window.render(screen, 0, 0, 0, 0, screen.nrows, screen.ncols)
     screen.render()
@@ -93,10 +94,18 @@ while True:
     #elif ch == 'K':
     #    pager.prev_page()
     elif ch == 'j':
-        foc_succ = window.find_focused_leaf().find_focusable_successor()
+        cur = window.find_focused_leaf()
+        foc_succ = cur.find_focusable_successor()
         if foc_succ:
             foc_succ.focus()
         else:
             window.find_first_leaf().focus()
+    elif ch == 'k':
+        cur = window.find_focused_leaf()
+        foc_pred = cur.find_focusable_predecessor()
+        if foc_pred:
+            foc_pred.focus()
+        else:
+            window.find_last_leaf().focus()
     else:
         window.find_focused_leaf().keypress(ch)

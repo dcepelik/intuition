@@ -42,8 +42,13 @@ class Container(tulip.Widget):
         return self
 
     def find_first_leaf(self):
-        if len(self._children):
+        if self._children:
             return self._children[0].find_first_leaf()
+        return None
+
+    def find_last_leaf(self):
+        if self._children:
+            return self._children[-1].find_last_leaf()
         return None
 
     def _render_generic(self, screen, y, x, i, j, rows, cols, a, b):
