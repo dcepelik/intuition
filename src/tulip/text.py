@@ -3,13 +3,14 @@ import tulip
 class Text(tulip.Widget):
     def __init__(self, text, classes=None):
         super().__init__()
+        if text == None:
+            raise ValueError("Text cannot be None")
         self.text = text
         if classes:
             for c in classes:
                 self.add_class(c)
 
-    @property
-    def size(self):
+    def _measure(self):
         return (1, len(self.text)) if self.text else (0, 0)
 
     def _render(self, screen, y, x, i, j, rows, cols):

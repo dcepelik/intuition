@@ -49,8 +49,7 @@ class Viewport(tulip.Widget):
         self.cols = cols
         self.halign = halign
 
-    @property
-    def size(self):
+    def _measure(self):
         widget_rows, widget_cols = self.widget.size
         return (self.rows or widget_rows, self.cols or widget_cols) # TODO or: a bit of a hack
 
@@ -106,7 +105,7 @@ class Layout:
     def add_cell(self, cell):
         self._cells.append(cell)
 
-    def _max_cell_size_generic(self, b, skip, u):
+    def _max_cell_measure_generic(self, b, skip, u):
         a = 1 - b
         sum_a = 0
         sum_a2 = 0
@@ -116,17 +115,17 @@ class Layout:
             if sum_a < skip:
                 continue
             sum_a2 += cell_group.size[a]
-            for idx, cell_content in enumerate(cell_group.rendered_widgets):
+            for idx, cell_content in enumerate(cell_group._children):
                 cell_size[idx] = max(cell_size[idx], cell_content.size[b])
             if sum_a2 >= u:
                 break
         return cell_size
 
     def _set_cell_sizes_generic(self, target_size, b, skip, u):
-        max_cell_size = self._max_cell_size_generic(b, skip, u)
+        max_cell_size = self._max_cell_measure_generic(b, skip, u)
         cells_total = sum(max_cell_size)
         for idx, cell in enumerate(self.cells):
-            cell_size = [cell.height, cell.width]
+            cell_size = [None, None]
             cell_max_size = [cell.max_height, cell.max_width]
             cell_min_size = [cell.min_height, cell.min_width]
             cell_size[b] = 0 if cell.weight > 0 else max_cell_size[idx]
@@ -145,8 +144,8 @@ class Layout:
                     cell.height = cell_size[0]
                     cell.width = cell_size[1]
 
-    def _size_generic(self, a, b):
-        sum_max_b = sum(self._max_cell_size_generic(b, 0, inf))
+    def _measure_generic(self, a, b):
+        sum_max_b = sum(self._max_cell_measure_generic(b, 0, inf))
         sum_a = sum(child.size[a] for child in self._children)
         return (sum_a, sum_max_b)
 
@@ -160,9 +159,8 @@ class ColumnLayout(Layout, tulip.VContainer):
         self._set_cell_sizes_generic(cols, 1, i, rows)
         return super()._render(screen, y, x, i, j, rows, cols)
 
-    @property
-    def size(self):
-        return self._size_generic(0, 1)
+    def _measure(self):
+        return self._measure_generic(0, 1)
 
 class RowLayout(Layout, tulip.HContainer):
     def __init__(self):
@@ -172,6 +170,5 @@ class RowLayout(Layout, tulip.HContainer):
         self._set_cell_sizes_generic(rows, 0, j, cols)
         return super()._render(screen, y, x, i, j, rows, cols)
 
-    @property
-    def size(self):
-        return self._size_generic(1, 0)
+    def _measure(self):
+        return self._measure_generic(1, 0)

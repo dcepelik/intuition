@@ -36,7 +36,7 @@ class TextTest(SoupUITestCase):
 
 class FixedSizeWidget(Widget):
     @property
-    def size(self):
+    def _measure(self):
         return (2, 4)
 
     def render(self):

@@ -4,11 +4,11 @@ import tulip
 import ago
 import notmuch
 
-screen = tulip.AnsiScreen(20, 120)
+screen = tulip.AnsiScreen(18, 120)
 
 class MainWindow(tulip.RowLayout):
     @property
-    def size(self):
+    def _measure(self):
         print(super()._size_generic(1, 0))
         return super().size
 
@@ -22,10 +22,10 @@ threads_ui.add_cell(tulip.Cell())
 threads_ui.add_cell(tulip.Cell(weight=2))
 
 database = notmuch.Database()
-threads = database.create_query('tag:spam').search_threads()
+threads = database.create_query('not tag:spam and not tag:showmax').search_threads()
 for t in threads:
-    tags = tulip.Text(' '.join(['+' + u for u in t.get_tags()]))
-    subj = tulip.Text(t.get_subject())
+    tags = tulip.Text(' '.join(['+' + u for u in t.get_tags()]) or '')
+    subj = tulip.Text(t.get_subject() or 'no subject')
     subj.add_class('focused')
     thread_ui = tulip.Row([
         tulip.Text(ago.human(t.get_newest_date(), precision=1, abbreviate=True)),
@@ -90,6 +90,7 @@ while True:
     sys.stdout.flush()
     screen.clear()
     window.render(screen, 0, 0, 0, 0, screen.nrows, screen.ncols)
+    print('---')
     screen.render()
     #print("Focused:")
     #for i, tl in enumerate(threads._children):

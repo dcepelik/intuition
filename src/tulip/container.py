@@ -51,6 +51,11 @@ class Container(tulip.Widget):
             return self._children[-1].find_last_leaf()
         return None
 
+    def invalidate(self):
+        super().invalidate()
+        if self.parent:
+            self.parent.invalidate()
+
     def _render_generic(self, screen, y, x, i, j, rows, cols, a, b):
         """Renders widgets either horizontally or vertically (depending on a and b).
         """
@@ -81,7 +86,7 @@ class Container(tulip.Widget):
                 break
         return tuple(total_size)
 
-    def _size_generic(self, a, b):
+    def _measure_generic(self, a, b):
         """Returns size when rendered horizontally or vertically (depending on a and b).
         """
 
@@ -99,9 +104,8 @@ class HContainer(Container):
     def _render(self, screen, y, x, i, j, rows, cols):
         return super()._render_generic(screen, y, x, i, j, rows, cols, 0, 1)
 
-    @property
-    def size(self):
-        return super()._size_generic(0, 1)
+    def _measure(self):
+        return super()._measure_generic(0, 1)
 
 class VContainer(Container):
     """Renders widgets vertically from top to bottom.
@@ -110,6 +114,5 @@ class VContainer(Container):
     def _render(self, screen, y, x, i, j, rows, cols):
         return super()._render_generic(screen, y, x, i, j, rows, cols, 1, 0)
 
-    @property
-    def size(self):
-        return super()._size_generic(1, 0)
+    def _measure(self):
+        return super()._measure_generic(1, 0)

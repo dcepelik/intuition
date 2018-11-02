@@ -11,6 +11,7 @@ class Widget(tulip.KeypressMixin):
         self.last_render_cols = None
         self.classes = []
         self._visible = False
+        self._size = None
 
     @property
     def resulting_classes(self):
@@ -47,6 +48,14 @@ class Widget(tulip.KeypressMixin):
             self.__class__.__name__))
 
     # TODO shout when size not defined
+    @property
+    def size(self):
+        if not self._size:
+            self._size = self._measure()
+        return self._size
+
+    def invalidate(self):
+        self._size = None
 
     def print_tree(self, indent = 0):
         tulip.print_indented("{} (size={})".format(
@@ -137,6 +146,5 @@ class Box(Widget):
     def _render(self, screen, y, x, i, j, rows, cols):
         return (self.rows, self.cols)
 
-    @property
-    def size(self):
+    def _measure(self):
         return (self.rows, self.cols)
