@@ -1,12 +1,18 @@
 import unittest
 from tulip import *
-from tulip.layout import HViewport, VAlign, HAlign
+from tulip.layout import Viewport, VAlign, HAlign
 
 class SoupUITestCase(unittest.TestCase):
     def assertScreenContent(self, screen, rows):
         num_missing = screen.nrows - len(rows)
         if num_missing > 0:
             rows += [''] * num_missing
+        #print("EXPECTED")
+        #for r in rows:
+        #    print(r)
+        #print("GOT")
+        #for r in screen.rows:
+        #    print(r)
         self.assertEqual(rows, screen.rows)
         screen.clear()
 
@@ -110,6 +116,14 @@ class VContainerTest(SoupUITestCase):
         self.assertEqual(vcont.render(screen, 0, 0, 0, 3, 4, 10), (2, 3))
         self.assertScreenContent(screen, ['bbb', 'dd'])
 
+class ViewportTest(SoupUITestCase):
+    def test_render(self):
+        vp = Viewport(Text('abcdefg'), rows=4, cols=2)
+        self.assertEqual(vp.size, (4, 2))
+        screen = MockScreen(10, 10)
+        self.assertEqual(vp.render(screen, 0, 0, 0, 2, 10, 10), (4, 2))
+        self.assertScreenContent(screen, ['cd'])
+
 class ColumnLayoutTest(SoupUITestCase):
     def test_render(self):
         tulip = ColumnLayout()
@@ -118,7 +132,7 @@ class ColumnLayoutTest(SoupUITestCase):
         tulip.add_cell(Cell())
         tulip.add_cell(Cell())
         tulip.add_child(Row([Text('1'), Text('2'), Text('veryveryverylong'), Text('4')]))
-        tulip.add_child(Row([HViewport(Text('4'), 2), Text('world'), Text('6'), Text('7')]))
+        tulip.add_child(Row([Viewport(Text('4'), cols=2), Text('world'), Text('6'), Text('7')]))
         tulip.add_child(Row([Text('hello'), Text('5'), Text('6'), Text('7')]))
 
         screen = MockScreen(10, 40)

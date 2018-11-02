@@ -34,26 +34,27 @@ class CellGroup:
     def layout(self):
         return self.lookup(Layout)
 
-class HViewport(tulip.Widget):
-    def __init__(self, widget, cols):
+class Viewport(tulip.Widget):
+    def __init__(self, widget, rows=None, cols=None):
         super().__init__()
         self.widget = widget
+        self.rows = rows
         self.cols = cols
-
-    def transpose(self):
-        return HViewport(self.widget.transpose(), self.cols)
 
     @property
     def size(self):
         widget_rows, widget_cols = self.widget.size
-        return (widget_rows, self.cols or widget_cols) # TODO or: a bit of a hack
+        return (self.rows or widget_rows, self.cols or widget_cols) # TODO or: a bit of a hack
 
     def _render(self, screen, y, x, i, j, rows, cols):
-        widget_rows, widget_cols = self.widget.render(screen, y, x, i, j, rows, self.cols)
-        return (widget_rows, self.cols)
+        r = self.rows or rows
+        c = self.cols or cols
+        widget_rows, widget_cols = self.widget.render(screen, y, x, i, j, r, c)
+        return (self.rows or widget_rows, self.cols or widget_cols)
 
     def print_tree(self, indent = 0):
-        self.widget.print_tree(indent)
+        tulip.print_indented("Viewport (rows={}, cols={}) of:".format(self.rows, self.cols), indent)
+        self.widget.print_tree(indent + 1)
 
 class Row(CellGroup, tulip.HContainer):
     def __init__(self, children = None):
@@ -61,7 +62,15 @@ class Row(CellGroup, tulip.HContainer):
 
     @property
     def rendered_widgets(self):
-        return [HViewport(widget, self.layout.cells[idx].width) for idx, widget in enumerate(super().rendered_widgets)]
+        return [Viewport(widget, cols=self.layout.cells[idx].width) for idx, widget in enumerate(super().rendered_widgets)]
+
+class Column(CellGroup, tulip.VContainer):
+    def __init__(self, children = None):
+        super().__init__(children or [])
+
+    @property
+    def rendered_widgets(self):
+        return [Viewport(widget, rows=self.layout.cells[idx].height) for idx, widget in enumerate(super().rendered_widgets)]
 
 class Layout:
     def __init__(self):
@@ -111,8 +120,6 @@ class Layout:
         return (sum_a, sum_max_b)
 
 
-import math
-
 class ColumnLayout(Layout, tulip.VContainer):
     def __init__(self):
         super().__init__()
@@ -125,12 +132,12 @@ class ColumnLayout(Layout, tulip.VContainer):
     def size(self):
         return self._size_generic(0, 1)
 
-class Column(tulip.transpose_widget(Row)):
-    pass
+class RowLayout(Layout, tulip.HContainer):
+    def __init__(self):
+        super().__init__()
 
-class RowLayout(tulip.transpose_widget(ColumnLayout)):
     def _render(self, screen, y, x, i, j, rows, cols):
-        self._set_cell_sizes_generic(cols, 0)
+        self._set_cell_sizes_generic(rows, 0)
         return super()._render(screen, y, x, i, j, rows, cols)
 
     @property
