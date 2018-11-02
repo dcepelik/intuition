@@ -101,6 +101,18 @@ class Widget(tulip.KeypressMixin):
     def visible(self, visible):
         self._visible = visible
 
+class Box(Widget):
+    def __init__(self, rows, cols):
+        self.rows = rows
+        self.cols = cols
+
+    def _render(self, screen, y, x, i, j, rows, cols):
+        return (self.rows, self.cols)
+
+    @property
+    def size(self):
+        return (self.rows, self.cols)
+
 class Wrapper:
     def __init__(self, widget):
         super().__init__()

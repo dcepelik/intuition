@@ -22,3 +22,27 @@ class Text(tulip.Widget):
 
     def print_tree(self, indent = 0):
         tulip.print_indented("Text ('{}')".format(self.text), indent)
+
+import math
+
+class Paragraph(tulip.VContainer):
+    def __init__(self, text):
+        self.text = text
+        self.reflow(math.inf)
+
+    def reflow(self, max_cols):
+        self.lines = []
+        for line in self.text.split("\n"):
+            if len(line) <= max_cols:
+                self.lines.append(line)
+            else:
+                self.lines.append(line[:max_cols])
+                self.lines.append("\u21B3" + line[max_cols:])
+
+    def _render(self, screen, y, x, i, j, rows, cols):
+        self.reflow(cols)
+        return super()._render(screen, y, x, i, j, rows, cols)
+
+    @property
+    def rendered_widgets(self):
+        return [Text(line) for line in self.lines]

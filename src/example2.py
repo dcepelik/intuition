@@ -11,42 +11,54 @@ class Message:
     def add_followup(self, msg1):
         self.follows.add(msg1)
 
-screen = tulip.AnsiScreen(20, 80)
+screen = tulip.AnsiScreen(20, 40)
 
 class MessageView(tulip.VContainer):
     def __init__(self, msg, indent=0):
         super().__init__()
-        self.msg = msg
-        header = tulip.HContainer()
+        self.indent = indent
+        header = tulip.ColumnLayout()
         header.add_class('bluebg')
-        spacing = tulip.Text(' ' * 3 * indent)
-        sender = tulip.Text('Foo Bar')
+        header.add_cell(tulip.Cell())
+        header.add_cell(tulip.Cell())
+        header.add_cell(tulip.Cell())
+        header.add_cell(tulip.Cell())
+        header.add_cell(tulip.Cell())
+        header.add_cell(tulip.Cell())
+        header.add_cell(tulip.Cell())
+        header.add_cell(tulip.Cell(weight=1))
+
+        sender = tulip.Text('Foo')
         sender.add_class('focused')
-        times = tulip.Text(' (3 months ago)')
-        mark = tulip.Text(' + ')
-        clrfil = tulip.Text(128 * ' ')
-        sample = tulip.Text(' I told you before, foo off my bar!')
-        header.add_child(spacing)
-        header.add_child(mark)
-        header.add_child(sender)
-        header.add_child(times)
-        header.add_child(sample)
-        header.add_child(clrfil)
+
+        header.add_child(tulip.Row([
+            tulip.Box(0, 1),
+            tulip.Text('+'),
+            tulip.Box(0, 1),
+            sender,
+            tulip.Box(0, 1),
+            tulip.Text('(2 days ago)'),
+            tulip.Box(0, 1),
+            tulip.Text('nowhere to go'),
+        ]))
         self.add_child(header)
-        textlines = tulip.VContainer()
-        textlines.add_child(tulip.Text("It is rather unexpected,"))
-        textlines.add_child(tulip.Text("what I'm 'bout to say"))
-        textlines.add_child(tulip.Text("I have become disconnected"))
-        textlines.add_child(tulip.Text("From the worlds so far away"))
-        self.add_child(textlines)
+
+        vindent = tulip.ColumnLayout()
+        vindent.add_cell(tulip.Cell(min_width=2 * indent))
+        vindent.add_cell(tulip.Cell(weight=1))
+        vindent.add_child(tulip.Row([
+            tulip.Text(''),
+            tulip.Paragraph("Hello World\nThis line is much longer than the others on purpose,\nso that the trivial line-wrapping algorithm can be demonstrated"),
+        ]))
+        self.add_child(vindent)
 
 msg1 = Message({'From': 'foo', 'Subject': 'bar'}, 'hello')
 msg1.follows.append(Message({'From': 'foo', 'Subject': 'bar'}, 'hello'))
 msg1.follows.append(Message({'From': 'foo', 'Subject': 'bar'}, 'hello'))
 msg1.follows.append(Message({'From': 'foo', 'Subject': 'bar'}, 'hello'))
 msg1v = MessageView(msg1)
-msg2v = MessageView(msg1)
+msg2v = MessageView(msg1, indent=1)
 
-vcont = tulip.VContainer([msg1v, msg2v])
+vcont = tulip.VContainer([msg1v, tulip.Box(1, 0), msg2v])
 vcont.render(screen, 0, 0, 0, 0, screen.nrows, screen.ncols)
 screen.render()
