@@ -18,11 +18,15 @@ class Widget(tulip.KeypressMixin):
 
     @property
     def resulting_classes(self):
+        if not self.parent:
+            return self.classes
         return self.classes + self.parent.resulting_classes
 
-    @property
     def add_class(self, name):
         self.classes.append(name)
+
+    def remove_class(self, name):
+        self.classes.remove(name)
 
     def transpose(self):
         return TransposedWrapper(self)
@@ -85,7 +89,7 @@ class Widget(tulip.KeypressMixin):
             return self
         if self.parent:
             return self.parent.lookup(typ)
-        raise RuntimeError("Requested predecessor of type {} not found".format(typ))
+        raise RuntimeError("Required predecessor of type {} not found".format(typ))
 
     @property
     def visible(self):

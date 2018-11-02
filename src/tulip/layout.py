@@ -29,39 +29,6 @@ class Cell:
         if min_height > max_height:
             raise ValueError('min_height must be less than or equal to max_height')
 
-    def transpose(self):
-        return TransposedCell(self)
-
-class TransposedCell:
-    def __init__(self, cell):
-        self.__dict__['cell'] = cell
-
-    def transpose(self):
-        return self.cell
-
-    def transposed_attr_name(name):
-        lookup = {
-            'halign': 'valign',
-            'min_width': 'min_height',
-            'max_width': 'max_height',
-            'valign': 'halign',
-            'min_height': 'min_width',
-            'max_height': 'max_width',
-            'width': 'height',
-            'height': 'width',
-        }
-        return lookup.get(name, name)
-
-    def __hasattr__(self, name):
-        return hasattr(self.cell, TransposedCell.transposed_attr_name(name))
-
-    def __getattr__(self, name):
-        return getattr(self.cell, TransposedCell.transposed_attr_name(name))
-
-    def __setattr__(self, name, value):
-        return setattr(self.cell, TransposedCell.transposed_attr_name(name), value)
-        
-
 class CellGroup:
     @property
     def layout(self):

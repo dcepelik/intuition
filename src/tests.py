@@ -130,16 +130,6 @@ class ColumnLayoutTest(SoupUITestCase):
             'hello5    6               7'
         ])
 
-class TransposedCellTest(SoupUITestCase):
-    def test_transpose(self):
-        cell = Cell(min_width=4, max_height=2, valign=VAlign.BOTTOM)
-        tcell = cell.transpose()
-        self.assertEqual(tcell.max_width, cell.max_height)
-        self.assertEqual(tcell.halign, cell.valign)
-        tcell.width = 20
-        self.assertEqual(tcell.width, cell.height)
-        self.assertEqual(tcell.height, cell.width)
-
 class RowLayoutTest(SoupUITestCase):
     def test_render(self):
         tulip = RowLayout()

@@ -1,9 +1,9 @@
 #!/usr/bin/python3
 
 import tulip
-import flowers
+import notmuch
 
-screen = tulip.MockScreen(20, 80)
+screen = tulip.AnsiScreen(20, 80)
 
 class SearchResultsWindow(tulip.RowLayout):
     pass
@@ -25,6 +25,12 @@ class ThreadLine(tulip.Row):
     def print_keys_help(self):
         for key, (handler, help_msg) in self.key_handlers.items():
             print("{}    {}".format(key, help_msg))
+
+    def handle_focus_changed(self, focused):
+        if focused:
+            self.add_class('focused')
+        else:
+            self.remove_class('focused')
 
 class ThreadView(tulip.ColumnLayout):
     def __init__(self):
@@ -59,6 +65,13 @@ window.add_cell(tulip.Cell())
 window.add_child(tulip.Column([window_list, pager, statusbar]))
 #print(pager.parent)
 
+db = notmuch.Database('/home/david/.mail')
+q = notmuch.Query(db, "tag:inbox and not tag:killed")
+q.search_messages()
+db.close()
+#for nm_thread in nm_threads:
+#    #print(nm_thread)
+
 for i in range(0, 30):
     threads.add_child(ThreadLine("Date", "Sender", "Subject #{}".format(i)))
 
@@ -77,15 +90,16 @@ def read_char():
 window.find_first_leaf().focus()
 
 while True:
-    sys.stdout.write("\033[H\033[J")
-    screen.clear()
-    window.render(screen, 0, 0, 0, 0, screen.nrows, screen.ncols)
-    print("---")
-    print(screen)
-    print("Focused:")
-    for i, tl in enumerate(threads._children):
-        print("#{}: {}".format(i, tl.visible))
-    window.find_focused_leaf().print_tree(1)
+    #sys.stdout.write("\033[H\033[J")
+    #print("---")
+    #screen.clear()
+    #window.render(screen, 0, 0, 0, 0, screen.nrows, screen.ncols)
+    #screen.render()
+    #print(screen)
+    #print("Focused:")
+    #for i, tl in enumerate(threads._children):
+    #    print("#{}: {}".format(i, tl.visible))
+    #window.find_focused_leaf().print_tree(1)
     ch = read_char()
     if ch == 'q':
         break
