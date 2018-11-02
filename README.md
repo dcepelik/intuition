@@ -4,30 +4,30 @@ Welcome to the home page of Tulip, the truly light-weight TUI library for Python
 
 ## ABOUT
 
-I'm sick and tired of *all* TUI frameworks for Python. This is my take at the topic.
+I'm sick and tired of *all* TUI frameworks for Python. My turn!
 
 ## FEATURES
 
-  - **Very new and thus not mature enough**
-  - KISS architecture with powerful abstractions
-  - Extremely compact (~ 500 SLOC)
-  - Only renders widgets which are visible at the moment (not as simple as it seems)
-  - Lazy construction of widgets
+  - **Very new and thus not mature enough!**
+  - Keep It Simple, Stupid!
+  - Extremely compact (< 1k SLOC)
+  - Reasonably efficient rendering of widgets
   - Clean interface to the terminal, not coupled with `curses`
-  - We even have some tests!
+  - Lazy construction of widgets
+  - (Even comes with some tests!)
 
 ### Widget set
 
 Only a few built-in widgets at the moment:
 
   - `HContainer` and `VContainer` for horizontal and vertical placement of widgets
-  - `RowLayout` and `ColumnLayout` for table-like placement of widgets
+  - `RowLayout` and `ColumnLayout` for table-like placement of widgets, with basic cell content alignment
   - `Pager` for "scrollable" content
 
 ## ARCHITECTURE
 
-A `Widget` is a base class representing a renderable object. It defines a minimal
-interface all widgets must implement:
+A `Widget` is a base class representing something which can be rendered. It
+defines a minimal interface all widgets must implement:
 
   - `size(self)` returns the size of the widget as a `(rows, cols)` tuple.
   - `render(self, screen, y, x, i, j, rows, cols)` renders (a part of) the
@@ -47,9 +47,9 @@ will be rendered. Also, the widgets may not exist prior to rendering and only
 those which are actually needed will be instantiated. (If the instantiation
 is expensive and involves reading a file, for example, this becomes very useful.)
 
-There's one more smart idea behind Tulip. Consider the `HContainer` and `VContainer`
-containers: the first renders things horizontally (left-to-right), the latter
-renders things vertically (top-to-bottom):
+There's only one smart idea behind Tulip: considering the `HContainer` and
+`VContainer` containers, the first renders things horizontally (left-to-right),
+the latter renders things vertically (top-to-bottom). Look:
 
 <div style="text-align: center">
 <img width=700 src="https://github.com/dcepelik/tulip/blob/master/img/hcont-and-vcont.svg" alt="HContainer and VContainer" />
@@ -62,35 +62,11 @@ If you were to write the source code for both, you would quickly notice that
   - `size` is maximum in one direction and the sum of sizes of widgets in the other
     direction.
 
-There are several ways to capture this symmetry in the code. The way I chose to
-look at it is that the `VContainer` is the same thing as the `HContainer`,
-except transposed. There's a function called `transpose_widget` which takes
-a widget class and creates a thin wrapper around it which performs the
-transposition. In the code, it's as simple as this:
-
-```python
-class VContainer(tulip.transpose_widget(HContainer)):
-    pass
-```
-
-The transposition is simple, too:
-
-```python
-def transpose_widget(widget_class):
-    class TransposedWidgetClass(widget_class):
-        @property
-        def rendered_widgets(self):
-            return [child.transpose() for child in super().rendered_widgets]
-
-        def _render(self, screen, y, x, i, j, rows, cols):
-            return swap_axes(super()._render(screen, x, y, j, i, cols, rows))
-
-        @property
-        def size(self):
-            return swap_axes(super().size)
-
-    return TransposedWidgetClass
-```
+I've taken about three attempts at capturing this symmetry; the best solution
+is the simplest one: having a set of `*_generic` functions which take an extra
+parameter or two (typically called `a` and `b`); by choosing values for these
+parameters, you'll achieve horizontal or vertical behavior. If you see these
+in the source, that's all they do.
 
 ## MORE TO COME
 
