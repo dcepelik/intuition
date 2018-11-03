@@ -7,7 +7,6 @@ class Container(tulip.Widget):
         for child in children:
             self.add_child(child)
         self._focused_child = None
-        self.visible_widgets = set()
 
     @property
     def rendered_widgets(self):

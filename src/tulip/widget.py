@@ -10,7 +10,6 @@ class Widget(tulip.KeypressMixin):
         self.last_render_rows = None
         self.last_render_cols = None
         self.classes = []
-        self._visible = False
         self._size = None
 
     @property
@@ -126,16 +125,6 @@ class Widget(tulip.KeypressMixin):
         if self.parent:
             return self.parent.lookup(typ)
         raise RuntimeError("Required predecessor of type {} not found".format(typ))
-
-    @property
-    def visible(self):
-        if not self.parent:
-            return self._visible
-        return self._visible and self.parent.visible
-
-    @visible.setter
-    def visible(self, visible):
-        self._visible = visible
 
 class Box(Widget):
     def __init__(self, rows, cols):
