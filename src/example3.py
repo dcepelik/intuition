@@ -22,7 +22,7 @@ threads_ui.add_cell(tulip.Cell())
 threads_ui.add_cell(tulip.Cell(weight=2))
 
 database = notmuch.Database()
-threads = database.create_query('not tag:spam and not tag:showmax').search_threads()
+threads = database.create_query('tag:inbox and not tag:killed').search_threads()
 for t in threads:
     tags = tulip.Text(' '.join(['+' + u for u in t.get_tags()]) or '')
     subj = tulip.Text(t.get_subject() or 'no subject')
@@ -114,13 +114,21 @@ while True:
         if foc_succ:
             foc_succ.focus()
         else:
-            window.find_first_leaf().focus()
+            l = window.find_first_leaf()
+            if not l.focusable:
+                l = l.find_focusable_successor()
+            if l:
+                l.focus()
     elif ch == 'k':
         foc_pred = cur.find_focusable_predecessor()
         if foc_pred:
             foc_pred.focus()
         else:
-            window.find_last_leaf().focus()
+            l = window.find_last_leaf()
+            if not l.focusable:
+                l = l.find_focusable_predecessor()
+            if l:
+                l.focus()
     else:
         window.find_focused_leaf().keypress(ch)
 

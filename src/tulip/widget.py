@@ -26,12 +26,6 @@ class Widget(tulip.KeypressMixin):
     def remove_class(self, name):
         self.classes.remove(name)
 
-    def toggle_class(self, name):
-        if name in self.classes:
-            self.remove_class(name)
-        else:
-            self.add_class(name)
-
     @property
     def size(self):
         if not self._size:
@@ -60,23 +54,23 @@ class Widget(tulip.KeypressMixin):
             self.__class__.__name__, self.size if hasattr(self, 'size') else '?'), indent)
 
     def find_successor(self):
-        widget = self
-        while widget.parent != None:
-            sibling_idx = widget.parent._children.index(widget) + 1
-            if sibling_idx < len(widget.parent._children):
-                return widget.parent._children[sibling_idx]
+        w = self
+        while w.parent != None:
+            s = w.parent._children.index(w) + 1
+            if s < len(w.parent._children):
+                return w.parent._children[s]
             else:
-                widget = widget.parent
+                w = w.parent
         return None
 
     def find_predecessor(self):
-        widget = self
-        while widget.parent != None:
-            sibling_idx = widget.parent._children.index(widget) - 1
-            if sibling_idx >= 0:
-                return widget.parent._children[sibling_idx]
+        w = self
+        while w.parent != None:
+            s = w.parent._children.index(w) - 1
+            if s >= 0:
+                return w.parent._children[s]
             else:
-                widget = widget.parent
+                w = w.parent
         return None
 
     def find_focusable_successor(self):

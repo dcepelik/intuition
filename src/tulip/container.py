@@ -23,6 +23,9 @@ class Container(tulip.Widget):
     def find_successor(self):
         return self._children[0]
 
+    def find_predecessor(self):
+        return self._children[-1]
+
     def find_focused_leaf(self):
         if self.focused_child:
             return self.focused_child.find_focused_leaf()
