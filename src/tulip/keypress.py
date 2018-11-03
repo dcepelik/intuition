@@ -23,4 +23,4 @@ class KeypressMixin:
             if self.parent:
                 self.parent.keypress(key)
             else:
-                raise UnhandledKeyError("Unhandled key: {}".format(key))
+                raise UnhandledKeyError("Key not bound: {}".format(key))

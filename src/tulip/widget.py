@@ -53,36 +53,57 @@ class Widget(tulip.KeypressMixin):
         tulip.print_indented("{} (size={})".format(
             self.__class__.__name__, self.size if hasattr(self, 'size') else '?'), indent)
 
-    def find_successor(self):
+    def _nlr_walk(self, d):
         w = self
         while w.parent != None:
-            s = w.parent._children.index(w) + 1
-            if s < len(w.parent._children):
+            s = w.parent._children.index(w) + d
+            if s >= 0 and s < len(w.parent._children):
                 return w.parent._children[s]
             else:
                 w = w.parent
         return None
 
-    def find_predecessor(self):
+    def nlr_next(self):
+        return self._nlr_walk(1)
+
+    def nlr_prev(self):
+        return self._nlr_walk(-1)
+
+    def _nlr_walk_focusable(self, d):
         w = self
-        while w.parent != None:
-            s = w.parent._children.index(w) - 1
-            if s >= 0:
-                return w.parent._children[s]
-            else:
-                w = w.parent
-        return None
+        while True:
+            w = w._nlr_walk(d)
+            if not w or w.focusable:
+                break
+        return w
+
+    def nlr_next_focusable(self):
+        return self._nlr_walk_focusable(1)
+
+    def nlr_prev_focusable(self):
+        return self._nlr_walk_focusable(-1)
+
+    def nlr_first_focusable(self):
+        if self.focusable:
+            return self
+        return self.nlr_next_focusable()
+
+    def nlr_last_focusable(self):
+        l = self.find_last_leaf()
+        if l.focusable:
+            return l
+        return l.nlr_prev_focusable()
 
     def find_focusable_successor(self):
-        succ = self.find_successor()
+        succ = self.nlr_next()
         while succ and not succ.focusable:
-            succ = succ.find_successor()
+            succ = succ.nlr_next()
         return succ
 
     def find_focusable_predecessor(self):
-        pred = self.find_predecessor()
+        pred = self.nlr_prev()
         while pred and not pred.focusable:
-            pred = pred.find_predecessor()
+            pred = pred.nlr_prev()
         return pred
 
     def focus(self):

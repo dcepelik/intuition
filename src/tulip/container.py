@@ -20,11 +20,17 @@ class Container(tulip.Widget):
         for child in self._children:
             child.print_tree(indent + 1)
 
-    def find_successor(self):
-        return self._children[0]
+    def _nlr_walk(self, d):
+        if d == 1:
+            return self.nlr_next()
+        else:
+            return self.nlr_prev()
 
-    def find_predecessor(self):
-        return self._children[-1]
+    def nlr_next(self):
+        return self._children[0] if self._children else None
+
+    def nlr_prev(self):
+        return self._children[-1] if self._children else None
 
     def find_focused_leaf(self):
         if self.focused_child:

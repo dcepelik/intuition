@@ -3,7 +3,7 @@ INDENT_SIZE = 2
 def print_indented(string, indent):
     print("{}{}".format(' ' * INDENT_SIZE * indent, string))
 
-from tulip.keypress import KeypressMixin
+from tulip.keypress import KeypressMixin, UnhandledKeyError
 from tulip.widget import Widget, Box
 from tulip.container import Container, HContainer, VContainer
 from tulip.screen import MockScreen, AnsiScreen, Theme, AnsiFormat, AnsiColor

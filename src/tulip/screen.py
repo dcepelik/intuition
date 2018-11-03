@@ -84,7 +84,7 @@ class AnsiScreen(Screen):
         self.ncols = ncols
         self.rows = None
         self.theme = Theme()
-        self.theme.set_class('red-text', fg = AnsiColor.RED)
+        self.theme.set_class('error', bg = AnsiColor.RED, fg = AnsiColor.WHITE, fmt=AnsiFormat.BOLD)
         self.theme.set_class('focused', fmt = AnsiFormat.BOLD)
         self.theme.set_class('bluebg', bg = AnsiColor.BLUE, fg = AnsiColor.BLACK)
         self.clear()

@@ -59,14 +59,19 @@ statusbar.add_child(tulip.Row([
     tulip.Text('1m/405'),
 ]))
 
+errlist = tulip.HContainer()
+errlist.add_child(tulip.Text('Foo!'))
+
 window = MainWindow()
 window.add_cell(tulip.Cell())
 window.add_cell(tulip.Cell(weight=1))
 window.add_cell(tulip.Cell())
-window.add_child(tulip.Column([window_list, pager, statusbar]))
+window.add_cell(tulip.Cell())
+window.add_child(tulip.Column([window_list, pager, statusbar, errlist]))
 
-window.find_first_leaf().focus()
-#window.print_tree()
+f = window.nlr_first_focusable()
+if f:
+    f.focus()
 
 import sys, tty, termios
 
@@ -97,10 +102,6 @@ while True:
     else:
         print("F Invisible")
     print('---')
-    #print("Focused:")
-    #for i, tl in enumerate(threads._children):
-    #    print("#{}: {}".format(i, tl.visible))
-    #window.find_focused_leaf().print_tree(1)
     pr.disable()
     ch = read_char()
     if ch == 'q':
@@ -110,27 +111,21 @@ while True:
     elif ch == 'K':
         pager.prev_page()
     elif ch == 'j':
-        foc_succ = cur.find_focusable_successor()
-        if foc_succ:
-            foc_succ.focus()
-        else:
-            l = window.find_first_leaf()
-            if not l.focusable:
-                l = l.find_focusable_successor()
-            if l:
-                l.focus()
+        f = cur.nlr_next_focusable() or window.nlr_first_focusable()
+        if f:
+            f.focus()
     elif ch == 'k':
-        foc_pred = cur.find_focusable_predecessor()
-        if foc_pred:
-            foc_pred.focus()
-        else:
-            l = window.find_last_leaf()
-            if not l.focusable:
-                l = l.find_focusable_predecessor()
-            if l:
-                l.focus()
+        f = cur.nlr_prev_focusable() or window.nlr_last_focusable()
+        if f:
+            f.focus()
     else:
-        window.find_focused_leaf().keypress(ch)
+        try:
+            window.find_focused_leaf().keypress(ch)
+        except tulip.UnhandledKeyError as e:
+            errlist._children.clear()
+            err = tulip.Text("Error: {}".format(e))
+            err.add_class('error')
+            errlist.add_child(err)
 
 s = io.StringIO()
 sortby = SortKey.CUMULATIVE

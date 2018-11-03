@@ -51,12 +51,12 @@ class Viewport(tulip.Widget):
 
     def _measure(self):
         widget_rows, widget_cols = self.widget.size
-        return (self.rows or widget_rows, self.cols or widget_cols) # TODO or: a bit of a hack
+        return (self.rows if self.rows is not None else widget_rows, self.cols if self.cols is not None else widget_cols) # TODO or: a bit of a hack
 
     def _render(self, screen, y, x, i, j, rows, cols):
         widget_rows, widget_cols = self.widget.size
-        r = self.rows or rows
-        c = self.cols or cols
+        r = self.rows if self.rows is not None else rows
+        c = self.cols if self.cols is not None else cols
         s = 0
         if self.halign == HAlign.CENTER:
             s = int(0.5 * (c - widget_cols))
@@ -67,7 +67,7 @@ class Viewport(tulip.Widget):
         else:
             j += s
         widget_rows, widget_cols = self.widget.render(screen, y, x, i, j, r, c)
-        return (self.rows or widget_rows, self.cols or widget_cols)
+        return (self.rows if self.rows is not None else widget_rows, self.cols if self.cols is not None else widget_cols)
 
     def print_tree(self, indent = 0):
         tulip.print_indented("Viewport (rows={}, cols={}) of:".format(self.rows, self.cols), indent)
@@ -105,7 +105,7 @@ class Layout:
     def add_cell(self, cell):
         self._cells.append(cell)
 
-    def _max_cell_measure_generic(self, b, skip, u):
+    def _max_cell_size_generic(self, b, skip, u):
         a = 1 - b
         sum_a = 0
         sum_a2 = 0
@@ -122,7 +122,7 @@ class Layout:
         return cell_size
 
     def _set_cell_sizes_generic(self, target_size, b, skip, u):
-        max_cell_size = self._max_cell_measure_generic(b, skip, u)
+        max_cell_size = self._max_cell_size_generic(b, skip, u)
         cells_total = sum(max_cell_size)
         for idx, cell in enumerate(self.cells):
             cell_size = [None, None]
@@ -145,7 +145,7 @@ class Layout:
                     cell.width = cell_size[1]
 
     def _measure_generic(self, a, b):
-        sum_max_b = sum(self._max_cell_measure_generic(b, 0, inf))
+        sum_max_b = sum(self._max_cell_size_generic(b, 0, inf))
         sum_a = sum(child.size[a] for child in self._children)
         return (sum_a, sum_max_b)
 
@@ -155,7 +155,6 @@ class ColumnLayout(Layout, tulip.VContainer):
         super().__init__()
 
     def _render(self, screen, y, x, i, j, rows, cols):
-        print("Render ColumnLayout y={} x={} i={} j={} r={} c={}".format(y, x, i, j, rows, cols))
         self._set_cell_sizes_generic(cols, 1, i, rows)
         return super()._render(screen, y, x, i, j, rows, cols)
 
