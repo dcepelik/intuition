@@ -90,6 +90,11 @@ while True:
     sys.stdout.flush()
     screen.clear()
     window.render(screen, 0, 0, 0, 0, screen.nrows, screen.ncols)
+    cur = window.find_focused_leaf()
+    if screen.is_widget_visible(cur):
+        print("F Visible")
+    else:
+        print("F Invisible")
     print('---')
     screen.render()
     #print("Focused:")
@@ -105,14 +110,12 @@ while True:
     elif ch == 'K':
         pager.prev_page()
     elif ch == 'j':
-        cur = window.find_focused_leaf()
         foc_succ = cur.find_focusable_successor()
         if foc_succ:
             foc_succ.focus()
         else:
             window.find_first_leaf().focus()
     elif ch == 'k':
-        cur = window.find_focused_leaf()
         foc_pred = cur.find_focusable_predecessor()
         if foc_pred:
             foc_pred.focus()

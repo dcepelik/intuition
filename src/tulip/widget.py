@@ -9,6 +9,7 @@ class Widget(tulip.KeypressMixin):
         self.last_render_x = None
         self.last_render_rows = None
         self.last_render_cols = None
+        self.last_render_seq = 0
         self.classes = []
         self._size = None
 
@@ -35,26 +36,28 @@ class Widget(tulip.KeypressMixin):
         else:
             self.add_class(name)
 
-    def render(self, screen, y, x, i, j, rows, cols):
-        self.last_render_y = y
-        self.last_render_x = x
-        self.last_render_rows = rows
-        self.last_render_cols = cols
-        return self._render(screen, y, x, i, j, rows, cols)
-
-    def _render(self, screen, y, x, i, j, rows, cols):
-        raise NotImplementedError('{} must implement the _render() method'.format(
-            self.__class__.__name__))
-
-    # TODO shout when size not defined
     @property
     def size(self):
         if not self._size:
             self._size = self._measure()
         return self._size
 
+    def render(self, screen, y, x, i, j, rows, cols):
+        self.last_render_y = y
+        self.last_render_x = x
+        self.last_render_rows = rows
+        self.last_render_cols = cols
+        self.last_render_seq = screen.seq
+        return self._render(screen, y, x, i, j, rows, cols)
+
     def invalidate(self):
         self._size = None
+
+    def _measure(self):
+        raise NotImlementedError('Class does not implement the _measure method')
+
+    def _render(self, screen, y, x, i, j, rows, cols):
+        raise NotImplementedError('Class does not implement the _render method')
 
     def print_tree(self, indent = 0):
         tulip.print_indented("{} (size={})".format(

@@ -1,5 +1,10 @@
-class MockScreen:
+class Screen:
+    def __init__(self):
+        self.seq = 0
+
+class MockScreen(Screen):
     def __init__(self, nrows, ncols):
+        super().__init__()
         self.nrows = nrows
         self.ncols = ncols
         self.rows = None
@@ -71,8 +76,9 @@ class Theme:
                     fmt = cls_fmt
         return (fg, bg, fmt)
 
-class AnsiScreen:
+class AnsiScreen(Screen):
     def __init__(self, nrows, ncols):
+        super().__init__()
         self.nrows = nrows
         self.ncols = ncols
         self.rows = None
@@ -115,6 +121,9 @@ class AnsiScreen:
             raise RuntimeError('attempted to put a string off the screen')
         self.rows[y].append((x, text, self.theme.get_style(classes)))
 
+    def is_widget_visible(self, w):
+        return self.seq - w.last_render_seq == 0
+
     def render(self):
         for row in self.rows:
             xpos = 0
@@ -127,6 +136,7 @@ class AnsiScreen:
                 self.reset_attrs()
                 xpos += len(text)
             AnsiScreen.write('\n')
+        self.seq += 1
 
 #scr = AnsiScreen(0, 0)
 #scr.set_attrs(AnsiColor.YELLOW, AnsiColor.DEFAULT, AnsiFormat.BOLD)
