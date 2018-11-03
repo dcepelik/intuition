@@ -90,13 +90,13 @@ while True:
     sys.stdout.flush()
     screen.clear()
     window.render(screen, 0, 0, 0, 0, screen.nrows, screen.ncols)
+    screen.render()
     cur = window.find_focused_leaf()
     if screen.is_widget_visible(cur):
         print("F Visible")
     else:
         print("F Invisible")
     print('---')
-    screen.render()
     #print("Focused:")
     #for i, tl in enumerate(threads._children):
     #    print("#{}: {}".format(i, tl.visible))

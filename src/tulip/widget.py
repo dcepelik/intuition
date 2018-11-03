@@ -12,17 +12,13 @@ class Widget(tulip.KeypressMixin):
         self.last_render_seq = 0
         self.classes = []
         self._size = None
+        self.focused_child = None
 
     @property
     def resulting_classes(self):
         if not self.parent:
-            cls = self.classes
-        else:
-            cls = self.classes + self.parent.resulting_classes
-        focused = []
-        if self.is_focused and not self.focused_child:
-            focused.append('focused')
-        return cls + focused
+            return self.classes
+        return self.classes + self.parent.resulting_classes
 
     def add_class(self, name):
         self.classes.append(name)
@@ -95,23 +91,41 @@ class Widget(tulip.KeypressMixin):
             pred = pred.find_predecessor()
         return pred
 
-    @property
-    def focused_child(self):
-        return None
-
     def focus(self):
-        if self.parent:
-            self.parent.focused_child = self
-            self.parent.focus()
+        w = self
+        got_focus = []
+        lost_focus = []
+        while w.parent:
+            got_focus.append(w)
+            if w.parent.focused_child != w:
+                while got_focus:
+                    got_focus.pop().on_got_focus()
+                lost_focus.clear()
+                s = w.parent.focused_child
+                while s:
+                    lost_focus.append(s)
+                    s = s.focused_child
+                w.parent.focused_child = w
+            w = w.parent
+        while lost_focus:
+            lost_focus.pop().on_lost_focus()
 
-    def handle_focus_changed(self, focused):
+    def on_got_focus(self):
+        self.add_class('focus-path')
+        if not self.focused_child:
+            self.add_class('focused')
+
+    def on_lost_focus(self):
+        self.remove_class('focus-path')
+        if 'focused' in self.classes:
+            self.classes.remove('focused')
+
+    def on_focus_changed(self):
         pass
 
     @property
     def is_focused(self):
-        if self.parent:
-            return self.parent.focused_child == self and self.parent.is_focused
-        return True
+        return not self.parent or (self.parent.focused_child == self and self.parent.is_focused)
 
     def find_focused_leaf(self):
         return self

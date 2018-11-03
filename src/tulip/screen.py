@@ -1,6 +1,7 @@
 class Screen:
     def __init__(self):
-        self.seq = 0
+        self.seq = 1
+        self.rendered_seq = 0
 
 class MockScreen(Screen):
     def __init__(self, nrows, ncols):
@@ -122,7 +123,7 @@ class AnsiScreen(Screen):
         self.rows[y].append((x, text, self.theme.get_style(classes)))
 
     def is_widget_visible(self, w):
-        return self.seq - w.last_render_seq == 0
+        return self.rendered_seq == w.last_render_seq
 
     def render(self):
         for row in self.rows:
@@ -136,6 +137,7 @@ class AnsiScreen(Screen):
                 self.reset_attrs()
                 xpos += len(text)
             AnsiScreen.write('\n')
+        self.rendered_seq = self.seq
         self.seq += 1
 
 #scr = AnsiScreen(0, 0)

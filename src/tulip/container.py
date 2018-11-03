@@ -6,22 +6,10 @@ class Container(tulip.Widget):
         self._children = []
         for child in children:
             self.add_child(child)
-        self._focused_child = None
 
     @property
     def rendered_widgets(self):
         return self._children
-
-    @property
-    def focused_child(self):
-        return self._focused_child
-
-    @focused_child.setter
-    def focused_child(self, new):
-        if self._focused_child:
-            self._focused_child.handle_focus_changed(False)
-        new.handle_focus_changed(True)
-        self._focused_child = new
 
     def add_child(self, child):
         self._children.append(child)
