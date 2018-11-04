@@ -10,6 +10,9 @@ class Text(tulip.Widget):
             for c in classes:
                 self.add_class(c)
 
+    def __repr__(self):
+        return "Text (size={}, text={})".format(self.size, self.text)
+
     def _measure(self):
         return (1, len(self.text)) if self.text else (0, 0)
 

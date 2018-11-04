@@ -22,7 +22,7 @@ threads_ui.add_cell(tulip.Cell())
 threads_ui.add_cell(tulip.Cell(weight=2))
 
 database = notmuch.Database()
-threads = database.create_query('tag:inbox and not tag:killed').search_threads()
+threads = database.create_query('from:v@asch.cz').search_threads()
 for t in threads:
     tags = tulip.Text(' '.join(['+' + u for u in t.get_tags()]) or '')
     subj = tulip.Text(t.get_subject() or 'no subject')
@@ -60,7 +60,6 @@ statusbar.add_child(tulip.Row([
 ]))
 
 errlist = tulip.HContainer()
-errlist.add_child(tulip.Text('Foo!'))
 
 window = MainWindow()
 window.add_cell(tulip.Cell())
@@ -101,6 +100,7 @@ while True:
         print("F Visible")
     else:
         print("F Invisible")
+    print("Offset to window:", cur.offset_to(window))
     print('---')
     pr.disable()
     ch = read_char()
@@ -110,6 +110,8 @@ while True:
         pager.next_page()
     elif ch == 'K':
         pager.prev_page()
+    elif ch == 'z':
+        pager.scroll_to_widget(cur)
     elif ch == 'j':
         f = cur.nlr_next_focusable() or window.nlr_first_focusable()
         if f:

@@ -20,17 +20,8 @@ class Container(tulip.Widget):
         for child in self._children:
             child.print_tree(indent + 1)
 
-    def _nlr_walk(self, d):
-        if d == 1:
-            return self.nlr_next()
-        else:
-            return self.nlr_prev()
-
-    def nlr_next(self):
-        return self._children[0] if self._children else None
-
-    def nlr_prev(self):
-        return self._children[-1] if self._children else None
+    def _nlr_walk_range(self, d, l, r):
+        return self._children[l(self)] if d > 0 else self._children[r(self)]
 
     def find_focused_leaf(self):
         if self.focused_child:
@@ -71,8 +62,10 @@ class Container(tulip.Widget):
 
         # render widgets which fall into the visible area (idx >= rstart), calculate total size
         total_size = [0, 0]
+        rend = rstart
         for widget in self.rendered_widgets[rstart:]:
             rsize = widget.render(screen, *yx, *ij, *rows_cols)
+            rend += 1
             yx[b] += rsize[b]
             ij[b] = 0
             total_size[a] = max(total_size[a], rsize[a])
@@ -80,6 +73,9 @@ class Container(tulip.Widget):
             rows_cols[b] -= rsize[b]
             if rows_cols[b] <= 0:
                 break
+
+        self.last_render_l = rstart
+        self.last_render_r = rend
         return tuple(total_size)
 
     def _measure_generic(self, a, b):
@@ -93,6 +89,14 @@ class Container(tulip.Widget):
             total_size[b] += size[b]
         return tuple(total_size)
 
+    def _child_offset_generic(self, w, b):
+        o = [0, 0]
+        for c in self._children:
+            if c == w:
+                break
+            o[b] += c.size[b]
+        return tuple(o)
+
 class HContainer(Container):
     """Renders widgets horizontally from left to right.
     """
@@ -103,6 +107,9 @@ class HContainer(Container):
     def _measure(self):
         return super()._measure_generic(0, 1)
 
+    def child_offset(self, w):
+        return self._child_offset_generic(w, 1)
+
 class VContainer(Container):
     """Renders widgets vertically from top to bottom.
     """
@@ -112,3 +119,6 @@ class VContainer(Container):
 
     def _measure(self):
         return super()._measure_generic(1, 0)
+
+    def child_offset(self, w):
+        return self._child_offset_generic(w, 0)
