@@ -96,7 +96,7 @@ while True:
     window.render(screen, 0, 0, 0, 0, screen.nrows, screen.ncols)
     screen.render()
     cur = window.find_focused_leaf()
-    if screen.is_widget_visible(cur):
+    if cur.is_visible():
         print("F Visible")
     else:
         print("F Invisible")

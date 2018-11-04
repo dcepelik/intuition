@@ -9,7 +9,7 @@ class Pager(tulip.VContainer):
     def _render(self, screen, y, x, i, j, rows, cols):
         if self.follow_focus:
             f = self.find_focused_leaf()
-            if f and not screen.is_widget_visible(f):
+            if f and not f.is_visible():
                 self.scroll_to_widget(f)
         return super()._render(screen, y, x, i + self.vscroll, j, rows, cols)
 

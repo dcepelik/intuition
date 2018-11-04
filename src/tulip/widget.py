@@ -9,12 +9,17 @@ class Widget(tulip.KeypressMixin):
         self.last_render_x = None
         self.last_render_rows = None
         self.last_render_cols = None
-        self.last_render_seq = 0
-        self.last_render_l = None
-        self.last_render_r = None
+        self.last_render_l = 0
+        self.last_render_r = 0
         self.classes = []
         self._size = None
         self.focused_child = None
+
+    def __repr__(self):
+        return "{} (size={})".format(self.__class__.__name__, self.size if hasattr(self, 'size') else '?')
+
+    def print_tree(self, indent = 0):
+        tulip.print_indented(self, indent)
 
     @property
     def resulting_classes(self):
@@ -42,7 +47,6 @@ class Widget(tulip.KeypressMixin):
         self.last_render_x = x
         self.last_render_rows = rows
         self.last_render_cols = cols
-        self.last_render_seq = screen.seq
         return self._render(screen, y, x, i, j, rows, cols)
 
     def _measure(self):
@@ -50,12 +54,6 @@ class Widget(tulip.KeypressMixin):
 
     def _render(self, screen, y, x, i, j, rows, cols):
         raise NotImplementedError('Class does not implement the _render method')
-
-    def __repr__(self):
-        return "{} (size={})".format(self.__class__.__name__, self.size if hasattr(self, 'size') else '?')
-
-    def print_tree(self, indent = 0):
-        tulip.print_indented(self, indent)
 
     def _nlr_walk_range(self, d, l, r):
         w = self
@@ -73,12 +71,6 @@ class Widget(tulip.KeypressMixin):
     def _nlr_walk_visible(self, d):
         return self._nlr_walk_range(d, lambda w: w.last_render_l, lambda w: w.last_render_r - 1)
 
-    def nlr_next(self):
-        return self._nlr_walk(1)
-
-    def nlr_prev(self):
-        return self._nlr_walk(-1)
-
     def _nlr_walk_focusable(self, d):
         w = self
         while True:
@@ -86,6 +78,18 @@ class Widget(tulip.KeypressMixin):
             if not w or w.focusable:
                 break
         return w
+
+    def nlr_next(self):
+        return self._nlr_walk(1)
+
+    def nlr_next_visible(self):
+        return self._nlr_walk_visible(1)
+
+    def nlr_prev(self):
+        return self._nlr_walk(-1)
+
+    def nlr_prev_visible(self):
+        return self._nlr_walk_visible(-1)
 
     def nlr_next_focusable(self):
         return self._nlr_walk_focusable(1)
@@ -145,6 +149,14 @@ class Widget(tulip.KeypressMixin):
     @property
     def is_focused(self):
         return not self.parent or (self.parent.focused_child == self and self.parent.is_focused)
+
+    def is_visible(self):
+        if not self.parent:
+            return True
+        i = self.parent._children.index(self)
+        if i >= self.parent.last_render_l and i < self.parent.last_render_r:
+            return True
+        return False
 
     def find_focused_leaf(self):
         return self
