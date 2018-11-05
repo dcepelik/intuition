@@ -27,6 +27,10 @@ class Text(tulip.Widget):
     def print_tree(self, indent = 0):
         tulip.print_indented("Text ('{}')".format(self.text), indent)
 
+    def set_text(self, text):
+        self.text = text
+        self.invalidate()
+
 import math
 
 class Paragraph(tulip.VContainer):

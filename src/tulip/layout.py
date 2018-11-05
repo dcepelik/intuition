@@ -143,6 +143,7 @@ class Layout:
                     cell_size[b] += int(avail_size * (float(cell.weight) / sum_weight))
                     cell.height = cell_size[0]
                     cell.width = cell_size[1]
+        print([c.height for c in self.cells])
 
     def _measure_generic(self, a, b):
         sum_max_b = sum(self._max_cell_size_generic(b, 0, inf))

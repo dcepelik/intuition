@@ -29,9 +29,11 @@ class Widget(tulip.KeypressMixin):
 
     def add_class(self, name):
         self.classes.append(name)
+        return self
 
     def remove_class(self, name):
         self.classes.remove(name)
+        return self
 
     @property
     def size(self):
@@ -42,7 +44,11 @@ class Widget(tulip.KeypressMixin):
     def invalidate(self):
         self._size = None
 
+    def before_render(self):
+        pass
+
     def render(self, screen, y, x, i, j, rows, cols):
+        self.before_render()
         self.last_render_y = y
         self.last_render_x = x
         self.last_render_rows = rows
@@ -58,7 +64,7 @@ class Widget(tulip.KeypressMixin):
     def _nlr_walk_range(self, d, l, r):
         w = self
         while w.parent != None:
-            s = w.parent._children.index(w) + d
+            s = w.index() + d
             if s >= l(w.parent) and s <= r(w.parent):
                 return w.parent._children[s]
             else:
@@ -153,7 +159,7 @@ class Widget(tulip.KeypressMixin):
     def is_visible(self):
         if not self.parent:
             return True
-        i = self.parent._children.index(self)
+        i = self.index()
         if i >= self.parent.last_render_l and i < self.parent.last_render_r:
             return True
         return False
@@ -183,6 +189,11 @@ class Widget(tulip.KeypressMixin):
             o[1] += c
             w = w.parent
         return tuple(o)
+
+    def index(self):
+        if self.parent:
+            return self.parent.child_index(self)
+        return None
 
 class Box(Widget):
     def __init__(self, rows, cols):

@@ -14,6 +14,11 @@ class Container(tulip.Widget):
     def add_child(self, child):
         self._children.append(child)
         child.parent = self
+        self.invalidate()
+
+    def clear_children(self):
+        self._children.clear()
+        self.invalidate()
 
     def print_tree(self, indent = 0):
         super().print_tree(indent)
@@ -21,7 +26,8 @@ class Container(tulip.Widget):
             child.print_tree(indent + 1)
 
     def _nlr_walk_range(self, d, l, r):
-        return self._children[l(self)] if d > 0 else self._children[r(self)]
+        if self._children:
+            return self._children[l(self)] if d > 0 else self._children[r(self)]
 
     def find_focused_leaf(self):
         if self.focused_child:
@@ -94,6 +100,9 @@ class Container(tulip.Widget):
                 break
             o[b] += c.size[b]
         return tuple(o)
+
+    def child_index(self, w):
+        return self._children.index(w)
 
 class HContainer(Container):
     """Renders widgets horizontally from left to right.

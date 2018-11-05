@@ -83,9 +83,14 @@ class AnsiScreen(Screen):
         self.ncols = ncols
         self.rows = None
         self.theme = Theme()
-        self.theme.set_class('error', bg = AnsiColor.RED, fg = AnsiColor.WHITE, fmt=AnsiFormat.BOLD)
+        self.theme.set_class('error', fg = AnsiColor.RED, fmt=AnsiFormat.BOLD)
         self.theme.set_class('focused', fmt = AnsiFormat.BOLD)
+        self.theme.set_class('sel_mark', fmt = AnsiFormat.BOLD)
         self.theme.set_class('bluebg', bg = AnsiColor.BLUE, fg = AnsiColor.BLACK)
+        self.theme.set_class('tags', fg = AnsiColor.LIGHT_YELLOW)
+        self.theme.set_class('subject', fg = AnsiColor.WHITE)
+        self.theme.set_class('authors', fg = AnsiColor.WHITE)
+        self.theme.set_class('query', fg = AnsiColor.WHITE)
         self.clear()
 
     def clear(self):
@@ -122,6 +127,7 @@ class AnsiScreen(Screen):
         self.rows[y].append((x, text, self.theme.get_style(classes)))
 
     def render(self):
+        #self.write("\033[H\033[J")
         for row in self.rows:
             xpos = 0
             for (x, text, attrs) in sorted(row, key=lambda x: x[0]):
