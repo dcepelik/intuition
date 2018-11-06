@@ -15,35 +15,75 @@ class MainWindow(tulip.RowLayout):
         print(super()._size_generic(1, 0))
         return super().size
 
-threads_ui = tulip.ColumnLayout()
-threads_ui.add_cell(tulip.Cell(halign=tulip.HAlign.RIGHT))
-threads_ui.add_cell(tulip.Cell())
-threads_ui.add_cell(tulip.Cell(weight=1))
-threads_ui.add_cell(tulip.Cell())
-threads_ui.add_cell(tulip.Cell(halign=tulip.HAlign.RIGHT))
-threads_ui.add_cell(tulip.Cell())
-threads_ui.add_cell(tulip.Cell())
-threads_ui.add_cell(tulip.Cell(weight=2))
+class ThreadList(tulip.ColumnLayout):
+    def __init__(self, search):
+        super().__init__()
+        self.search = search
+        self.add_cell(tulip.Cell(halign=tulip.HAlign.RIGHT))
+        self.add_cell(tulip.Cell())
+        self.add_cell(tulip.Cell(weight=1))
+        self.add_cell(tulip.Cell())
+        self.add_cell(tulip.Cell(halign=tulip.HAlign.RIGHT))
+        self.add_cell(tulip.Cell())
+        self.add_cell(tulip.Cell())
+        self.add_cell(tulip.Cell(weight=2))
 
+class ThreadView(tulip.Row):
+    def __init__(self, children=[]):
+        super().__init__(children)
+        self.selected = False
+        self.sel_mark = tulip.Text('').add_class('sel_mark')
+
+    def before_render(self):
+        self.sel_mark.set_text("{} ".format(hook_tick_char()) if self.selected else '')
+
+def hook_thread_subject(t):
+    return t.get_subject()
+
+class ThreadView2(tulip.Row):
+    def __init__(self, nm_thread):
+        super().__init__()
+        self.nm_thread = nm_thread
+        self.focusable = True
+        self.selected = False
+        self.ui_date = tulip.Text().add_class('time')
+        self.ui_authors = tulip.Text().add_class('date')
+        self.ui_total_lparen = tulip.Text()
+        self.ui_total = tulip.Text()
+        self.ui_total_rparen = tulip.Text()
+        self.ui_check = tulip.Text().add_class('check')
+        self.ui_subj = tulip.Text().add_class('subject')
+        self.ui_tags = tulip.Text().add_class('tags')
+        self.add_child(self.ui_date)
+        self.add_child(tulip.Box(0, 1))
+        self.add_child(self.ui_authors)
+        self.add_child(self.ui_total_lparen)
+        self.add_child(self.ui_total)
+        self.add_child(self.ui_total_rparen)
+        self.add_child(self.ui_check)
+        self.add_child(tulip.HContainer([self.ui_subj, tulip.Box(0, 1), self.ui_tags]))
+
+    def before_render(self):
+        self.ui_date.set_text(hook_thread_date(self.nm_thread))
+        self.ui_authors.set_text(hook_thread_authors(self.nm_thread))
+        total = hook_thread_total_msgs(self.nm_thread)
+        self.ui_total_lparen.set_text(' (' if total else '')
+        self.ui_total.set_text(str(total) if total else '')
+        self.ui_total_rparen.set_text(') ' if total else '')
+        self.ui_check.set_text(hook_tick_char() + ' ' if self.selected else '')
+        self.ui_subj.set_text(hook_thread_subject(self.nm_thread) or hook_no_subject_text())
+        self.ui_tags.set_text(hook_thread_tags(self.nm_thread) or '')
+
+threads_ui = ThreadList(None)
 sel = set()
 
-def hook_name_is_mine(name):
+def hook_is_me(name):
     return name == 'David Čepelík' or name == 'David Cepelik'
 
 def hook_my_short_name():
     return 'me'
 
-def filter_authors(authors):
-    r = []
-    and_me = False
-    for a in authors:
-        if hook_name_is_mine(a):
-            and_me = True
-        else:
-            r.append(re.split('[ @]', a)[0])
-    return ([hook_my_short_name()] if and_me else []) + sorted(r)
-
-def ago(unix):
+def hook_ago(unix):
     now = int(time.time())
     d = now - unix
     minute = 60
@@ -64,51 +104,40 @@ def ago(unix):
         return '{}m'.format(int(d / minute))
     return 'now'
 
-class ThreadWidget(tulip.Row):
-    def __init__(self, children=[]):
-        super().__init__(children)
-        self.selected = False
-        self.sel_mark = tulip.Text('').add_class('sel_mark')
+def hook_thread_date(t):
+    return hook_ago(t.get_newest_date())
 
-    def before_render(self):
-        self.sel_mark.set_text("{} ".format(hook_tick_char()) if self.selected else '')
+def hook_thread_tags(t):
+    return ' '.join(['+' + u for u in t.get_tags()])
+
+def hook_mangle_authors(authors):
+    r = []
+    and_me = False
+    for a in authors:
+        if hook_is_me(a):
+            and_me = True
+        else:
+            r.append(re.split('[ @]', a)[0])
+    return ([hook_my_short_name()] if and_me else []) + sorted(r)
+
+def hook_thread_authors(t):
+    authors = re.split('[|,] ?', t.get_authors())
+    return ', '.join(hook_mangle_authors(authors))
+
+def hook_thread_total_msgs(t):
+    return t.get_total_messages()
+
+def hook_default_query():
+    return 'tag:inbox and not tag:killed'
+
+def hook_no_subject_text():
+    return '(no subject)'
 
 database = notmuch.Database()
-query = 'tag:inbox and not tag:killed'
+query = hook_default_query()
 threads = database.create_query(query).search_threads()
 for t in threads:
-    tags = tulip.Text(' '.join(['+' + u for u in t.get_tags()]) or '')
-    tags.add_class('tags')
-    subj = tulip.Text(t.get_subject() or '(no subject)')
-    subj.add_class('subject')
-    total = t.get_total_messages()
-    authors = re.split('[|,] ?', t.get_authors())
-    authors = filter_authors(authors)
-    authors_ui = tulip.Text(', '.join(authors))
-    authors_ui.add_class('authors')
-    thread_ui = ThreadWidget([
-        tulip.Text(ago(t.get_newest_date())),
-        tulip.Box(0, 1),
-        authors_ui,
-    ])
-
-    if total > 1:
-        thread_ui.add_child(tulip.Text(' ('))
-        thread_ui.add_child(tulip.Text(str(total)))
-        thread_ui.add_child(tulip.Text(') '))
-    else:
-        thread_ui.add_child(tulip.Box(0, 0))
-        thread_ui.add_child(tulip.Box(0, 0))
-        thread_ui.add_child(tulip.Box(0, 0))
-    thread_ui.add_child(thread_ui.sel_mark)
-
-    thread_ui.add_child(tulip.HContainer([
-        subj,
-        tulip.Box(0, 1),
-        tags,
-    ]))
-    thread_ui.focusable = True
-    threads_ui.add_child(thread_ui)
+    threads_ui.add_child(ThreadView2(t))
 
 def hook_tick_char():
     return '+' #"\u2713"

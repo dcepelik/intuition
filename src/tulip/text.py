@@ -1,7 +1,7 @@
 import tulip
 
 class Text(tulip.Widget):
-    def __init__(self, text, classes=None):
+    def __init__(self, text='', classes=None):
         super().__init__()
         if text == None:
             raise ValueError("Text cannot be None")
@@ -28,8 +28,9 @@ class Text(tulip.Widget):
         tulip.print_indented("Text ('{}')".format(self.text), indent)
 
     def set_text(self, text):
-        self.text = text
-        self.invalidate()
+        if self.text != text:
+            self.text = text
+            self.invalidate()
 
 import math
 

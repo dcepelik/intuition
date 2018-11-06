@@ -38,6 +38,7 @@ class Widget(tulip.KeypressMixin):
     @property
     def size(self):
         if not self._size:
+            self.before_render()
             self._size = self._measure()
         return self._size
 
