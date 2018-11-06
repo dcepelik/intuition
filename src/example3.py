@@ -9,6 +9,9 @@ import shutil
 cols, rows = shutil.get_terminal_size()
 screen = tulip.AnsiScreen(rows - 1, cols)
 
+def hook_check_mark():
+    return '+' #"\u2713"
+
 class MainWindow(tulip.RowLayout):
     @property
     def _measure(self):
@@ -28,15 +31,6 @@ class ThreadList(tulip.ColumnLayout):
         self.add_cell(tulip.Cell())
         self.add_cell(tulip.Cell(weight=2))
 
-class ThreadView(tulip.Row):
-    def __init__(self, children=[]):
-        super().__init__(children)
-        self.selected = False
-        self.sel_mark = tulip.Text('').add_class('sel_mark')
-
-    def before_render(self):
-        self.sel_mark.set_text("{} ".format(hook_tick_char()) if self.selected else '')
-
 def hook_thread_subject(t):
     return t.get_subject()
 
@@ -48,10 +42,10 @@ class ThreadView2(tulip.Row):
         self.selected = False
         self.ui_date = tulip.Text().add_class('time')
         self.ui_authors = tulip.Text().add_class('date')
-        self.ui_total_lparen = tulip.Text()
+        self.ui_total_lparen = tulip.Text(' (')
         self.ui_total = tulip.Text()
-        self.ui_total_rparen = tulip.Text()
-        self.ui_check = tulip.Text().add_class('check')
+        self.ui_total_rparen = tulip.Text(') ')
+        self.ui_check = tulip.Text(hook_check_mark() + ' ').add_class('check')
         self.ui_subj = tulip.Text().add_class('subject')
         self.ui_tags = tulip.Text().add_class('tags')
         self.add_child(self.ui_date)
@@ -63,16 +57,18 @@ class ThreadView2(tulip.Row):
         self.add_child(self.ui_check)
         self.add_child(tulip.HContainer([self.ui_subj, tulip.Box(0, 1), self.ui_tags]))
 
+    def toggle_select(self):
+        self.selected = not self.selected
+
     def before_render(self):
-        self.ui_date.set_text(hook_thread_date(self.nm_thread))
-        self.ui_authors.set_text(hook_thread_authors(self.nm_thread))
+        self.ui_date.text = hook_thread_date(self.nm_thread)
+        self.ui_authors.text = hook_thread_authors(self.nm_thread)
         total = hook_thread_total_msgs(self.nm_thread)
-        self.ui_total_lparen.set_text(' (' if total else '')
-        self.ui_total.set_text(str(total) if total else '')
-        self.ui_total_rparen.set_text(') ' if total else '')
-        self.ui_check.set_text(hook_tick_char() + ' ' if self.selected else '')
-        self.ui_subj.set_text(hook_thread_subject(self.nm_thread) or hook_no_subject_text())
-        self.ui_tags.set_text(hook_thread_tags(self.nm_thread) or '')
+        self.ui_total.text = str(total)
+        self.ui_total_lparen.hidden = self.ui_total_rparen.hidden = self.ui_total.hidden = total < 2
+        self.ui_check.hidden = not self.selected
+        self.ui_subj.text = hook_thread_subject(self.nm_thread) or hook_no_subject_text()
+        self.ui_tags.text = hook_thread_tags(self.nm_thread) or ''
 
 threads_ui = ThreadList(None)
 sel = set()
@@ -139,9 +135,6 @@ threads = database.create_query(query).search_threads()
 for t in threads:
     threads_ui.add_child(ThreadView2(t))
 
-def hook_tick_char():
-    return '+' #"\u2713"
-
 pager = tulip.Pager([threads_ui])
 
 query_ui = tulip.Text('').add_class('query')
@@ -199,13 +192,13 @@ pr = cProfile.Profile()
 
 while True:
     cur = threads_ui.find_focused_leaf()
-    query_ui.set_text(query)
+    query_ui.text = query
     if cur:
         if sel:
-            msgcount.set_text('Msg {}/{} ({}{})'.format(1 + cur.index(), len(threads_ui._children), len(sel), hook_tick_char()))
+            msgcount.text = 'Msg {}/{} ({}{})'.format(1 + cur.index(), len(threads_ui._children), len(sel), hook_check_mark())
         else:
-            msgcount.set_text('Msg {}/{}'.format(1 + cur.index(), len(threads_ui._children)))
-        pgcount.set_text('Page {}/{}'.format(pager.page(), pager.num_pages()))
+            msgcount.text = 'Msg {}/{}'.format(1 + cur.index(), len(threads_ui._children))
+        pgcount.text = 'Page {}/{}'.format(pager.page(), pager.num_pages())
     screen.clear()
     def render():
         window.render(screen, 0, 0, 0, 0, screen.nrows, screen.ncols)
@@ -270,7 +263,7 @@ while True:
     elif ch == '@':
         pass
     elif ch == ' ':
-        cur.selected = not cur.selected
+        cur.toggle_select()
         if cur.selected:
             sel.add(cur)
         else:
@@ -278,7 +271,7 @@ while True:
         next_msg()
     elif ch == 'v':
         for t in threads_ui._children:
-            t.selected = not t.selected
+            t.toggle_select()
             if t.selected:
                 sel.add(t)
             else:

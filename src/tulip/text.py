@@ -1,14 +1,12 @@
 import tulip
 
+# Clean-up
 class Text(tulip.Widget):
     def __init__(self, text='', classes=None):
         super().__init__()
         if text == None:
             raise ValueError("Text cannot be None")
-        self.text = text
-        if classes:
-            for c in classes:
-                self.add_class(c)
+        self._text = text
 
     def __repr__(self):
         return "Text (size={}, text={})".format(self.size, self.text)
@@ -28,9 +26,17 @@ class Text(tulip.Widget):
         tulip.print_indented("Text ('{}')".format(self.text), indent)
 
     def set_text(self, text):
-        if self.text != text:
-            self.text = text
+        if self._text != text:
+            self._text = text
             self.invalidate()
+
+    @property
+    def text(self):
+        return self._text
+
+    @text.setter
+    def text(self, text):
+        self.set_text(text)
 
 import math
 

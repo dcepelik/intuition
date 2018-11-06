@@ -14,6 +14,7 @@ class Widget(tulip.KeypressMixin):
         self.classes = []
         self._size = None
         self.focused_child = None
+        self._hidden = False
 
     def __repr__(self):
         return "{} (size={})".format(self.__class__.__name__, self.size if hasattr(self, 'size') else '?')
@@ -36,7 +37,19 @@ class Widget(tulip.KeypressMixin):
         return self
 
     @property
+    def hidden(self):
+        return self._hidden
+
+    @hidden.setter
+    def hidden(self, h):
+        if self._hidden != h:
+            self._hidden = h
+            self.invalidate()
+
+    @property
     def size(self):
+        if self._hidden:
+            return (0, 0)
         if not self._size:
             self.before_render()
             self._size = self._measure()
@@ -49,6 +62,8 @@ class Widget(tulip.KeypressMixin):
         pass
 
     def render(self, screen, y, x, i, j, rows, cols):
+        if self._hidden:
+            return (0, 0)
         self.before_render()
         self.last_render_y = y
         self.last_render_x = x
