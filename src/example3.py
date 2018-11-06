@@ -12,11 +12,66 @@ screen = tulip.AnsiScreen(rows - 1, cols)
 def hook_check_mark():
     return '+' #"\u2713"
 
-class MainWindow(tulip.RowLayout):
-    @property
-    def _measure(self):
-        print(super()._size_generic(1, 0))
-        return super().size
+def hook_thread_subject(t):
+    return t.get_subject()
+
+def hook_is_me(name):
+    return name == 'David Čepelík' or name == 'David Cepelik'
+
+def hook_my_short_name():
+    return 'me'
+
+def hook_ago(unix):
+    now = int(time.time())
+    d = now - unix
+    minute = 60
+    hour = 60 * minute
+    day = 24 * hour
+    week = 7 * day
+    month = 30 * day
+    year = 365 * day
+    def helper(scale, unit):
+        return '{}{}'.format(int(d / scale), unit)
+    if d > 3 * month:
+        return helper(month, 'M')
+    if d > week:
+        return helper(week, 'w')
+    if d > day:
+        return helper(day, 'd')
+    if d > 2 * hour:
+        return helper(hour, 'h')
+    if d > minute:
+        return helper(minute, 'm')
+    return 'now'
+
+def hook_thread_date(t):
+    return hook_ago(t.get_newest_date())
+
+def hook_thread_tags(t):
+    return ' '.join(['+' + u for u in t.get_tags()])
+
+def hook_mangle_authors(authors):
+    r = []
+    and_me = False
+    for a in authors:
+        if hook_is_me(a):
+            and_me = True
+        else:
+            r.append(re.split('[ @]', a)[0])
+    return ([hook_my_short_name()] if and_me else []) + sorted(r)
+
+def hook_thread_authors(t):
+    authors = re.split('[|,] ?', t.get_authors())
+    return ', '.join(hook_mangle_authors(authors))
+
+def hook_thread_total_msgs(t):
+    return t.get_total_messages()
+
+def hook_default_query():
+    return 'tag:inbox and not tag:killed'
+
+def hook_no_subject_text():
+    return '(no subject)'
 
 class ThreadList(tulip.ColumnLayout):
     def __init__(self, search):
@@ -31,10 +86,15 @@ class ThreadList(tulip.ColumnLayout):
         self.add_cell(tulip.Cell())
         self.add_cell(tulip.Cell(weight=2))
 
-def hook_thread_subject(t):
-    return t.get_subject()
+    @property
+    def pager(self):
+        return self.lookup(tulip.Pager)
 
-class ThreadView2(tulip.Row):
+    @property
+    def window(self):
+        return self.lookup(MainWindow)
+
+class ThreadListItem(tulip.Row):
     def __init__(self, nm_thread):
         super().__init__()
         self.nm_thread = nm_thread
@@ -73,96 +133,53 @@ class ThreadView2(tulip.Row):
 threads_ui = ThreadList(None)
 sel = set()
 
-def hook_is_me(name):
-    return name == 'David Čepelík' or name == 'David Cepelik'
+class MainWindow(tulip.RowLayout):
+    def __init__(self):
+        super().__init__()
+        self.ui_winlist = tulip.HContainer()
+        self.ui_pager = tulip.Pager([threads_ui])
+        self.ui_msgcount = tulip.Text().add_class('msgcount')
+        self.ui_pgcount = tulip.Text().add_class('pgcount')
+        self.ui_statusbar = tulip.ColumnLayout()
+        self.ui_statusbar.add_cell(tulip.Cell(weight=1))
+        self.ui_statusbar.add_cell(tulip.Cell(weight=1, halign=tulip.HAlign.CENTER))
+        self.ui_statusbar.add_cell(tulip.Cell(weight=1, halign=tulip.HAlign.RIGHT))
+        self.ui_statusbar.add_child(tulip.Row([
+            tulip.Text(':reply-all'),
+            self.ui_pgcount,
+            self.ui_msgcount,
+        ]))
+        self.ui_errlist = tulip.HContainer()
+        self.add_cell(tulip.Cell())
+        self.add_cell(tulip.Cell(weight=1))
+        self.add_cell(tulip.Cell())
+        self.add_cell(tulip.Cell())
+        self.add_child(tulip.Column([
+            self.ui_winlist,
+            self.ui_pager,
+            self.ui_statusbar,
+            self.ui_errlist,
+        ]))
 
-def hook_my_short_name():
-    return 'me'
+    def before_render(self):
+        self.ui_pgcount.text = 'Page {}/{}'.format(self.ui_pager.page(), self.ui_pager.num_pages())
 
-def hook_ago(unix):
-    now = int(time.time())
-    d = now - unix
-    minute = 60
-    hour = 60 * minute
-    day = 24 * hour
-    week = 7 * day
-    month = 30 * day
-    year = 365 * day
-    if d > 3 * month:
-        return '{}m'.format(int(d / month))
-    if d > week:
-        return '{}w'.format(int(d / week))
-    if d > day:
-        return '{}d'.format(int(d / day))
-    if d > 2 * hour:
-        return '{}h'.format(int(d / hour))
-    if d > minute:
-        return '{}m'.format(int(d / minute))
-    return 'now'
+    def after_render(self):
+        self.ui_errlist.clear_children()
 
-def hook_thread_date(t):
-    return hook_ago(t.get_newest_date())
-
-def hook_thread_tags(t):
-    return ' '.join(['+' + u for u in t.get_tags()])
-
-def hook_mangle_authors(authors):
-    r = []
-    and_me = False
-    for a in authors:
-        if hook_is_me(a):
-            and_me = True
-        else:
-            r.append(re.split('[ @]', a)[0])
-    return ([hook_my_short_name()] if and_me else []) + sorted(r)
-
-def hook_thread_authors(t):
-    authors = re.split('[|,] ?', t.get_authors())
-    return ', '.join(hook_mangle_authors(authors))
-
-def hook_thread_total_msgs(t):
-    return t.get_total_messages()
-
-def hook_default_query():
-    return 'tag:inbox and not tag:killed'
-
-def hook_no_subject_text():
-    return '(no subject)'
+    def add_error(self, msg):
+        self.ui_errlist.add_child(tulip.Text("E: {}".format(msg)).add_class('error'))
 
 database = notmuch.Database()
 query = hook_default_query()
 threads = database.create_query(query).search_threads()
 for t in threads:
-    threads_ui.add_child(ThreadView2(t))
-
-pager = tulip.Pager([threads_ui])
+    threads_ui.add_child(ThreadListItem(t))
 
 query_ui = tulip.Text('').add_class('query')
-window_list = tulip.HContainer()
-window_list.add_child(query_ui)
 
-msgcount = tulip.Text('')
-pgcount = tulip.Text('')
-statusbar = tulip.ColumnLayout()
-statusbar.add_cell(tulip.Cell(weight=1))
-statusbar.add_cell(tulip.Cell(weight=1, halign=tulip.HAlign.CENTER))
-statusbar.add_cell(tulip.Cell(weight=1, halign=tulip.HAlign.RIGHT))
-statusbar.add_child(tulip.Row([
-    tulip.Text(':reply-all'),
-    pgcount,
-    msgcount,
-]))
-
-errlist = tulip.HContainer()
-
-window = MainWindow()
-window.add_cell(tulip.Cell())
-window.add_cell(tulip.Cell(weight=1))
-window.add_cell(tulip.Cell())
-window.add_cell(tulip.Cell())
-window.add_child(tulip.Column([window_list, pager, statusbar, errlist]))
-
-f = window.nlr_first_focusable()
+win = MainWindow()
+f = win.nlr_first_focusable()
 if f:
     f.focus()
 
@@ -186,27 +203,19 @@ def charname(c):
     if c == ' ':
         return 'Space'
 
-import cProfile, pstats, io
-from pstats import SortKey
-pr = cProfile.Profile()
-
 while True:
     cur = threads_ui.find_focused_leaf()
     query_ui.text = query
     if cur:
         if sel:
-            msgcount.text = 'Msg {}/{} ({}{})'.format(1 + cur.index(), len(threads_ui._children), len(sel), hook_check_mark())
+            win.ui_msgcount.text = 'Msg {}/{} ({}{})'.format(1 + cur.index(), len(threads_ui._children), len(sel), hook_check_mark())
         else:
-            msgcount.text = 'Msg {}/{}'.format(1 + cur.index(), len(threads_ui._children))
-        pgcount.text = 'Page {}/{}'.format(pager.page(), pager.num_pages())
+            win.ui_msgcount.text = 'Msg {}/{}'.format(1 + cur.index(), len(threads_ui._children))
     screen.clear()
     def render():
-        window.render(screen, 0, 0, 0, 0, screen.nrows, screen.ncols)
-    def error(msg):
-        errlist.add_child(tulip.Text("E: {}".format(msg)).add_class('error'))
+        win.render(screen, 0, 0, 0, 0, screen.nrows, screen.ncols)
     render()
     screen.render()
-    errlist.clear_children()
     ch = read_char()
     def next_msg():
         f = cur.nlr_next_focusable()
@@ -214,9 +223,9 @@ while True:
             f.focus()
             render()
             if not f.is_visible():
-                pager.next_page()
+                win.ui_pager.next_page()
         else:
-            error("No messages below")
+            win.add_error("No messages below")
     if ch == 'q':
         break
     elif ch == 'j':
@@ -227,39 +236,39 @@ while True:
             f.focus()
             render()
             if not f.is_visible():
-                pager.prev_page()
+                win.ui_pager.prev_page()
         else:
-            error("No messages above")
+            win.add_error("No messages above")
     elif ch == 'J':
-        pager.next_page()
+        win.ui_pager.next_page()
         render()
         if cur and not cur.is_visible():
-            v = pager.nlr_next_visible()
+            v = win.ui_pager.nlr_next_visible()
             while v and not v.focusable: # TODO idiomatically
                 v = v.nlr_next_visible()
             if v:
                 v.focus()
     elif ch == 'K':
-        pager.prev_page()
+        win.ui_pager.prev_page()
         render()
         if cur and not cur.is_visible():
-            v = pager.nlr_next_visible()
+            v = win.ui_pager.nlr_next_visible()
             while v and not v.focusable:
                 v = v.nlr_next_visible()
             if v:
                 v.focus()
     elif ch == 'g':
-        l = pager.nlr_first_focusable()
+        l = win.ui_pager.nlr_first_focusable()
         if l:
             l.focus()
-            pager.scroll_to_widget(l)
+            win.ui_pager.scroll_to_widget(l)
     elif ch == 'G':
-        l = pager.nlr_last_focusable()
+        l = win.ui_pager.nlr_last_focusable()
         if l:
             l.focus()
-            pager.scroll_to_widget(l)
+            win.ui_pager.scroll_to_widget(l)
     elif ch == 'z':
-        pager.scroll_to_widget(cur)
+        win.ui_pager.scroll_to_widget(cur)
     elif ch == '@':
         pass
     elif ch == ' ':
@@ -277,4 +286,4 @@ while True:
             else:
                 sel.remove(t)
     else:
-        error("Key {} not bound".format(charname(ch)))
+        win.add_error("Key {} not bound".format(charname(ch)))
