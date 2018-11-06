@@ -85,7 +85,7 @@ class AnsiScreen(Screen):
         self.theme = Theme()
         self.theme.set_class('error', fg = AnsiColor.RED, fmt=AnsiFormat.BOLD)
         self.theme.set_class('focused', fmt = AnsiFormat.BOLD)
-        self.theme.set_class('check', fmt = AnsiFormat.BOLD)
+        self.theme.set_class('check', fg = AnsiColor.LIGHT_YELLOW, fmt = AnsiFormat.BOLD)
         self.theme.set_class('bluebg', bg = AnsiColor.BLUE, fg = AnsiColor.BLACK)
         self.theme.set_class('tags', fg = AnsiColor.LIGHT_YELLOW)
         self.theme.set_class('subject', fg = AnsiColor.WHITE)

@@ -5,8 +5,11 @@ class Widget(tulip.KeypressMixin):
         super().__init__()
         self.parent = None
         self.focusable = False
+        self.last_render_screen = None
         self.last_render_y = None
         self.last_render_x = None
+        self.last_render_i = None
+        self.last_render_j = None
         self.last_render_rows = None
         self.last_render_cols = None
         self.last_render_l = 0
@@ -68,13 +71,26 @@ class Widget(tulip.KeypressMixin):
         if self._hidden:
             return (0, 0)
         self.before_render()
+        self.last_render_screen = screen
         self.last_render_y = y
         self.last_render_x = x
+        self.last_render_i = i
+        self.last_render_j = j
         self.last_render_rows = rows
         self.last_render_cols = cols
         r = self._render(screen, y, x, i, j, rows, cols)
         self.after_render()
         return r
+
+    def redraw(self):
+        if self.last_render_screen:
+            return self.render(self.last_render_screen,
+                self.last_render_y,
+                self.last_render_x,
+                self.last_render_i,
+                self.last_render_j,
+                self.last_render_rows,
+                self.last_render_cols)
 
     def _measure(self):
         raise NotImlementedError('Class does not implement the _measure method')
