@@ -82,6 +82,7 @@ class AnsiScreen(Screen):
         self.nrows = nrows
         self.ncols = ncols
         self.rows = None
+        self.layer = 16 
         self.theme = Theme()
         self.theme.set_class('error', fg = AnsiColor.RED, fmt=AnsiFormat.BOLD)
         self.theme.set_class('focused', fmt = AnsiFormat.BOLD)
@@ -91,6 +92,12 @@ class AnsiScreen(Screen):
         self.theme.set_class('subject', fg = AnsiColor.WHITE)
         self.theme.set_class('authors', fg = AnsiColor.WHITE)
         self.theme.set_class('query', fg = AnsiColor.WHITE)
+        #self.theme.set_class('msg-author', fmt = AnsiFormat.BOLD)
+        #self.theme.set_class('msg-author_addr', fg = AnsiColor.BLACK)
+        self.theme.set_class('quoteline', fg = AnsiColor.BLUE)
+        self.theme.set_class('msg-header', fg = AnsiColor.BLACK, bg = AnsiColor.BLUE)
+        self.theme.set_class('msg-headers', fg = AnsiColor.BLACK, bg = AnsiColor.LIGHT_GRAY)
+        #self.theme.set_class('header-name')
         self.clear()
 
     def clear(self):
@@ -124,20 +131,25 @@ class AnsiScreen(Screen):
     def put(self, y, x, text, classes):
         if y < 0 or y >= self.nrows or x < 0 or x >= self.ncols:
             raise RuntimeError('attempted to put a string off the screen')
-        self.rows[y].append((x, text, self.theme.get_style(classes)))
+        self.rows[y].append((x, self.layer, text, self.theme.get_style(classes)))
+
+    def draw_rectangle(self, y0, x, rows, cols, classes):
+        for y in range(y0, y0 + rows):
+            self.put(y, x, ' ' * cols, classes)
 
     def render(self):
         #self.write("\033[H\033[J")
         for row in self.rows:
             xpos = 0
-            for (x, text, attrs) in sorted(row, key=lambda x: x[0]):
-                if xpos != x:
-                    AnsiScreen.advance(x - xpos)
-                    xpos = x
+            for (x, _, text, attrs) in sorted(row, key=lambda x: (x[1], x[0])):
+                #if xpos != x:
+                #    AnsiScreen.advance(x - xpos)
+                #    xpos = x
+                AnsiScreen.write_cmd('[{}G'.format(1 + x))
                 self.set_attrs(*attrs)
                 AnsiScreen.write(text)
                 self.reset_attrs()
-                xpos += len(text)
+                #xpos += len(text)
             AnsiScreen.write('\n')
 
 #scr = AnsiScreen(0, 0)

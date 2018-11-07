@@ -66,6 +66,7 @@ class Container(tulip.Widget):
             ij[b] -= widget.size[b]
             assert ij[b] >= 0
 
+        screen.layer += 1
         # render widgets which fall into the visible area (idx >= rstart), calculate total size
         total_size = [0, 0]
         self.last_render_l = self.last_render_r = rstart
@@ -79,7 +80,9 @@ class Container(tulip.Widget):
             rows_cols[b] -= rsize[b]
             if rows_cols[b] <= 0:
                 break
+        screen.layer -= 1
 
+        screen.draw_rectangle(y, x, total_size[0], total_size[1], self.resulting_classes)
         return tuple(total_size)
 
     def _measure_generic(self, a, b):

@@ -41,24 +41,30 @@ class Text(tulip.Widget):
 import math
 
 class Paragraph(tulip.VContainer):
-    def __init__(self, text):
+    def __init__(self, text=''):
         super().__init__()
-        self.text = text
+        self._text = text
         self.reflow(math.inf)
 
     def reflow(self, max_cols):
-        self.lines = []
+        self.clear_children()
         for line in self.text.split("\n"):
             if len(line) <= max_cols:
-                self.lines.append(line)
+                self.add_child(tulip.Text(line))
             else:
-                self.lines.append(line[:max_cols])
-                self.lines.append("\u21B3" + line[max_cols:])
+                self.add_child(tulip.Text(line[:max_cols]))
+                self.add_child(tulip.Text("\u21B3" + line[max_cols:]))
 
     def _render(self, screen, y, x, i, j, rows, cols):
         self.reflow(cols)
         return super()._render(screen, y, x, i, j, rows, cols)
 
     @property
-    def rendered_widgets(self):
-        return [Text(line) for line in self.lines]
+    def text(self):
+        return self._text
+
+    @text.setter
+    def text(self, text):
+        if self._text != text:
+            self._text = text
+            self.invalidate()

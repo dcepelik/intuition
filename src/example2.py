@@ -18,7 +18,6 @@ class MessageView(tulip.VContainer):
         super().__init__()
         self.indent = indent
         header = tulip.ColumnLayout()
-        header.add_class('bluebg')
         header.add_cell(tulip.Cell())
         header.add_cell(tulip.Cell())
         header.add_cell(tulip.Cell())

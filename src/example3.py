@@ -5,6 +5,9 @@ import re
 import time
 import notmuch
 import shutil
+import email
+import email.parser
+import email.policy
 
 cols, rows = shutil.get_terminal_size()
 screen = tulip.AnsiScreen(rows - 1, cols)
@@ -21,7 +24,10 @@ def hook_is_me(name):
 def hook_my_short_name():
     return 'me'
 
-def hook_ago(unix):
+def hook_show_header(name):
+    return name.lower() in {'subject', 'to', 'user-agent'}
+
+def hook_ago(unix, short=True):
     now = int(time.time())
     d = now - unix
     minute = 60
@@ -31,17 +37,22 @@ def hook_ago(unix):
     month = 30 * day
     year = 365 * day
     def helper(scale, unit):
-        return '{}{}'.format(int(d / scale), unit)
+        v = int(d / scale)
+        if v > 1:
+            unit += 's'
+        if short:
+            return '{}{}'.format(v, unit[0])
+        return '{} {} ago'.format(v, unit)
     if d > 3 * month:
-        return helper(month, 'M')
+        return helper(month, 'month')
     if d > week:
-        return helper(week, 'w')
+        return helper(week, 'week')
     if d > day:
-        return helper(day, 'd')
+        return helper(day, 'day')
     if d > 2 * hour:
-        return helper(hour, 'h')
+        return helper(hour, 'hour')
     if d > minute:
-        return helper(minute, 'm')
+        return helper(minute, 'minute')
     return 'now'
 
 def hook_thread_date(t):
@@ -83,6 +94,96 @@ def hook_charname(c):
 
 class UIError(Exception):
     pass
+
+class MessageView(tulip.VContainer):
+    def __init__(self, nm_msg, indent=0):
+        super().__init__()
+        self.nm_msg = nm_msg
+        self.indent = indent
+
+        layout = tulip.ColumnLayout()
+        layout.add_cell(tulip.Cell())
+        layout.add_cell(tulip.Cell())
+        layout.add_cell(tulip.Cell())
+        layout.add_cell(tulip.Cell(weight=1))
+
+        self.collapse_mark = tulip.Text('+')
+        self.ui_date = tulip.Text()
+        self.ui_author = tulip.Text().add_class('msg-author')
+        self.ui_author_addr = tulip.Text().add_class('msg-author_addr')
+        summary = tulip.HContainer([
+            self.ui_author,
+            tulip.Box(0, 1),
+            self.ui_author_addr,
+            tulip.Text('('),
+            self.ui_date,
+            tulip.Text(') '),
+        ])
+        layout.add_child(tulip.Row([
+            tulip.Box(0, 4 * self.indent),
+            self.collapse_mark,
+            tulip.Box(0, 1),
+        summary]).add_class('msg-header'))
+
+        self.ui_headers = tulip.ColumnLayout()
+        self.ui_headers.add_cell(tulip.Cell())
+        self.ui_headers.add_cell(tulip.Cell())
+        self.ui_headers.add_cell(tulip.Cell(weight=1))
+        layout.add_child(tulip.Row([
+            tulip.Box(0, 0),
+            tulip.Box(0, 0),
+            tulip.Box(0, 0),
+            self.ui_headers,
+        ]).add_class('msg-headers'))
+
+        layout2 = tulip.ColumnLayout()
+        layout2.add_cell(tulip.Cell())
+        layout2.add_cell(tulip.Cell(weight=1))
+        self.ui_text = tulip.Paragraph()
+        layout2.add_child(tulip.Row([
+            tulip.Box(0, 4 * self.indent),
+            self.ui_text,
+        ]))
+
+        self.ui_replies = tulip.VContainer()
+        for r in self.nm_msg.get_replies():
+            self.ui_replies.add_child(MessageView(r, self.indent + 1))
+        self.add_child(layout)
+        self.add_child(layout2)
+        self.add_child(self.ui_replies)
+
+    def before_render(self):
+        self.ui_date.text = hook_ago(self.nm_msg.get_date(), short=False)
+        try:
+            with open(self.nm_msg.get_filename(), 'rb') as msg_file:
+                msg = email.parser.BytesParser(policy=email.policy.default).parse(msg_file)
+                self.ui_headers.clear_children()
+                for h in msg:
+                    if not hook_show_header(h):
+                        continue
+                    self.ui_headers.add_child(tulip.Row([
+                        tulip.Text(h + ':').add_class('header-name'),
+                        tulip.Box(0, 1),
+                        tulip.Text(msg[h]),
+                    ]))
+                author = msg['from'].addresses[0]
+                self.ui_author.text = author.display_name or author.username
+                self.ui_author_addr.text = '<{}@{}> '.format(author.username, author.domain)
+                self.ui_author_addr.hide()
+                for part in msg.walk():
+                    if part.get_content_type() == 'text/plain':
+                        self.ui_text.text = part.get_payload(decode=True).decode(part.get_content_charset() or 'utf-8')
+                        break
+        except UnicodeDecodeError:
+            pass
+
+class ThreadView(tulip.VContainer):
+    def __init__(self, nm_thread):
+        super().__init__()
+        self.nm_thread = nm_thread
+
+    def build_msg_view_and_replies(self, msg):
+        pass
 
 # Widget support for relative focus moving
 class ThreadList(tulip.ColumnLayout):
@@ -201,12 +302,15 @@ class SoupWindow(tulip.RowLayout):
             self.ui_pgcount,
             self.ui_msgcount,
         ]))
+        self.ui_exp = tulip.Pager([])
         self.ui_errlist = tulip.HContainer()
+        self.add_cell(tulip.Cell(weight=1))
         self.add_cell(tulip.Cell(weight=1))
         self.add_cell(tulip.Cell())
         self.add_cell(tulip.Cell())
         self.add_child(tulip.Column([
             self.ui_pager,
+            self.ui_exp,
             self.ui_statusbar,
             self.ui_errlist,
         ]))
@@ -277,6 +381,9 @@ while True:
             ui_threads.focus_last_msg()
         elif ch == 'z':
             win.ui_pager.scroll_to_widget(cur)
+        elif ch == 'l':
+            win.ui_exp.clear_children()
+            win.ui_exp.add_child(MessageView(next(cur.nm_thread.get_toplevel_messages())))
         elif ch == 'J':
             win.ui_pager.next_page()
             win.ui_pager.redraw()

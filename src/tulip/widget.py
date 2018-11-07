@@ -49,6 +49,12 @@ class Widget(tulip.KeypressMixin):
             self._hidden = h
             self.invalidate()
 
+    def hide(self):
+        self.hidden = True
+
+    def show(self):
+        self.hidden = False
+
     @property
     def size(self):
         if self._hidden:
