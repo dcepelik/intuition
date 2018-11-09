@@ -249,3 +249,7 @@ class Box(Widget):
 
     def _measure(self):
         return (self.rows, self.cols)
+
+class Empty(Box):
+    def __init__(self):
+        super().__init__(0, 0)
