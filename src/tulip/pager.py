@@ -11,20 +11,20 @@ class Pager(tulip.VContainer):
 
     def next_page(self):
         rows, _ = self.size
-        self.vscroll = max(0, min(self.vscroll + self.last_render_rows, rows - 1))
+        self.vscroll = max(0, min(self.vscroll + self.rendered_size[0], rows - self.rendered_size[0]))
 
     def prev_page(self):
-        self.vscroll = max(self.vscroll - self.last_render_rows, 0)
+        self.vscroll = max(self.vscroll - self.rendered_size[0], 0)
 
     def scroll_to_widget(self, w):
         self.vscroll = w.offset_to(self)[0]
 
     def num_pages(self):
-        if self.last_render_rows:
-            return math.ceil(self.size[0] / self.last_render_rows)
+        if self.rendered_size[0]:
+            return math.ceil(self.size[0] / self.rendered_size[0])
         return 0
 
     def page(self):
-        if self.last_render_rows:
-            return 1 + int(self.vscroll / self.last_render_rows)
+        if self.rendered_size[0]:
+            return 1 + int(self.vscroll / self.rendered_size[0])
         return 0

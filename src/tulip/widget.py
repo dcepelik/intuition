@@ -5,16 +5,11 @@ class Widget(tulip.KeypressMixin):
         super().__init__()
         self.parent = None
         self.focusable = False
-        self.last_render_screen = None
-        self.last_render_y = None
-        self.last_render_x = None
-        self.last_render_i = None
-        self.last_render_j = None
-        self.last_render_rows = None
-        self.last_render_cols = None
+        self.classes = []
+        self.render_args = None
+        self.rendered_size = (0, 0)
         self.last_render_l = 0
         self.last_render_r = 0
-        self.classes = []
         self._size = None
         self.focused_child = None
         self._hidden = False
@@ -77,32 +72,20 @@ class Widget(tulip.KeypressMixin):
         if self._hidden:
             return (0, 0)
         self.before_render()
-        self.last_render_screen = screen
-        self.last_render_y = y
-        self.last_render_x = x
-        self.last_render_i = i
-        self.last_render_j = j
-        self.last_render_rows = rows
-        self.last_render_cols = cols
-        r = self._render(screen, y, x, i, j, rows, cols)
+        self.render_args = (screen, y, x, i, j, rows, cols)
+        self.rendered_size = self._render(screen, y, x, i, j, rows, cols)
         self.after_render()
-        return r
+        return self.rendered_size
 
     def redraw(self):
-        if self.last_render_screen:
-            return self.render(self.last_render_screen,
-                self.last_render_y,
-                self.last_render_x,
-                self.last_render_i,
-                self.last_render_j,
-                self.last_render_rows,
-                self.last_render_cols)
+        if self.render_args:
+            return self.render(*self.render_args)
 
     def _measure(self):
-        raise NotImlementedError('Class does not implement the _measure method')
+        raise NotImlementedError()
 
     def _render(self, screen, y, x, i, j, rows, cols):
-        raise NotImplementedError('Class does not implement the _render method')
+        raise NotImplementedError()
 
     def _nlr_walk_range(self, d, l, r):
         w = self
@@ -167,9 +150,7 @@ class Widget(tulip.KeypressMixin):
             got_focus.append(w)
             if w.parent.focused_child != w:
                 while got_focus:
-                    g = got_focus.pop()
-                    g.on_got_focus()
-                    g.on_focus_changed()
+                    got_focus.pop().on_got_focus()
                 lost_focus.clear()
                 s = w.parent.focused_child
                 while s:
@@ -179,8 +160,6 @@ class Widget(tulip.KeypressMixin):
             w = w.parent
         while lost_focus:
             lost_focus.pop().on_lost_focus()
-        while got_focus:
-            got_focus.pop().on_focus_changed()
 
     def on_got_focus(self):
         self.add_class('focus-path')
@@ -191,9 +170,6 @@ class Widget(tulip.KeypressMixin):
         self.remove_class('focus-path')
         if 'focused' in self.classes:
             self.classes.remove('focused')
-
-    def on_focus_changed(self):
-        pass
 
     @property
     def is_focused(self):
@@ -216,12 +192,12 @@ class Widget(tulip.KeypressMixin):
     def find_last_leaf(self):
         return self
 
-    def lookup(self, typ):
-        if isinstance(self, typ):
+    def lookup(self, cls):
+        if isinstance(self, cls):
             return self
         if self.parent:
-            return self.parent.lookup(typ)
-        raise RuntimeError("Required predecessor of type {} not found".format(typ))
+            return self.parent.lookup(cls)
+        raise RuntimeError("Required {} predecessor not found".format(cls))
 
     def offset_to(self, p):
         w = self
