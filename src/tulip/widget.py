@@ -4,12 +4,12 @@ class Widget(tulip.KeypressMixin):
     def __init__(self):
         super().__init__()
         self.parent = None
-        self.focusable = False
-        self.classes = []
         self.render_args = None
         self.rendered_size = (0, 0)
-        self.last_render_l = 0
-        self.last_render_r = 0
+        self.focusable = False
+        self.classes = []
+        self.visible_start = 0
+        self.visible_stop = 0
         self._size = None
         self.focused_child = None
         self._hidden = False
@@ -69,11 +69,12 @@ class Widget(tulip.KeypressMixin):
         pass
 
     def render(self, screen, y, x, i, j, rows, cols):
-        if self._hidden:
-            return (0, 0)
-        self.before_render()
         self.render_args = (screen, y, x, i, j, rows, cols)
-        self.rendered_size = self._render(screen, y, x, i, j, rows, cols)
+        self.before_render()
+        if not self._hidden:
+            self.rendered_size = self._render(screen, y, x, i, j, rows, cols)
+        else:
+            self.rendered_size = (0, 0)
         self.after_render()
         return self.rendered_size
 
@@ -101,7 +102,7 @@ class Widget(tulip.KeypressMixin):
         return self._nlr_walk_range(d, lambda w: 0, lambda w: len(w._children) - 1)
 
     def _nlr_walk_visible(self, d):
-        return self._nlr_walk_range(d, lambda w: w.last_render_l, lambda w: w.last_render_r - 1)
+        return self._nlr_walk_range(d, lambda w: w.visible_start, lambda w: w.visible_stop - 1)
 
     def _nlr_walk_focusable(self, d):
         w = self
@@ -179,7 +180,7 @@ class Widget(tulip.KeypressMixin):
         if not self.parent:
             return True
         i = self.index()
-        if i >= self.parent.last_render_l and i < self.parent.last_render_r:
+        if i >= self.parent.visible_start and i < self.parent.visible_stop:
             return True
         return False
 

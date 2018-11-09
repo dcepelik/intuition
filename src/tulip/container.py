@@ -56,23 +56,23 @@ class Container(tulip.Widget):
         yx = [y, x]
         ij = [i, j]
         rows_cols = [rows, cols]
-        rstart = 0
+        self.visible_start = 0
 
         # skip widgets which are out of the visible area
-        for idx, widget in enumerate(self.rendered_widgets):
+        for widget in self.rendered_widgets:
             if widget.size[b] > ij[b]:
-                rstart = idx
                 break
+            self.visible_start += 1
             ij[b] -= widget.size[b]
             assert ij[b] >= 0
 
         screen.layer += 1
-        # render widgets which fall into the visible area (idx >= rstart), calculate total size
+        # render widgets which fall into the visible area, calculate total size
         total_size = [0, 0]
-        self.last_render_l = self.last_render_r = rstart
-        for widget in self.rendered_widgets[rstart:]:
+        self.visible_stop = self.visible_start
+        for widget in self.rendered_widgets[self.visible_start:]:
             rsize = widget.render(screen, *yx, *ij, *rows_cols)
-            self.last_render_r += 1
+            self.visible_stop += 1
             yx[b] += rsize[b]
             ij[b] = 0
             total_size[a] = max(total_size[a], rsize[a])

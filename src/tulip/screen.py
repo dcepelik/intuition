@@ -117,12 +117,11 @@ class AnsiScreen(Screen):
         self.layer = 16 
         self.theme = Theme()
         self.theme.set_class('error', fg = Ansi256(ColorName.RED), fmt = AnsiFormat.BOLD)
-        self.theme.set_class('focused', fmt = AnsiFormat.BOLD)
         self.theme.set_class('qgroup', fg = Ansi256(ColorName.YELLOW))
         self.theme.set_class('qgroup-2', fg = Ansi256(ColorName.RED))
         self.theme.set_class('check', fg = Ansi256(ColorName.YELLOW), fmt = AnsiFormat.BOLD)
         self.theme.set_class('bluebg', bg = Ansi256(ColorName.BLUE), fg = Ansi256(ColorName.BLACK))
-        self.theme.set_class('tags', fg = Ansi256(220))
+        self.theme.set_class('tags', fg = Ansi256(85))
         self.theme.set_class('subject', fg = Ansi256(ColorName.WHITE))
         self.theme.set_class('authors', fg = Ansi256(ColorName.WHITE))
         self.theme.set_class('query', fg = Ansi256(ColorName.WHITE))
@@ -132,6 +131,7 @@ class AnsiScreen(Screen):
         self.theme.set_class('msg-header', fg = Ansi256(ColorName.BLACK), bg = Ansi256(85))
         self.theme.set_class('msg-headers', fg = Ansi256(ColorName.BLACK), bg = Ansi256(157))
         #self.theme.set_class('header-name')
+        self.theme.set_class('focused', fg = Ansi256(ColorName.BLACK), bg = Ansi256(ColorName.WHITE))
         self.clear()
 
     def clear(self):
