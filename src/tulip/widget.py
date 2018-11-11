@@ -8,31 +8,31 @@ class Widget(tulip.KeypressMixin):
         self.rendered_size = (0, 0)
         self.focusable = False
         self.classes = []
-        self.visible_start = 0
-        self.visible_stop = 0
         self._size = None
         self.focused_child = None
         self._hidden = False
 
     def __repr__(self):
-        return "{} (size={})".format(self.__class__.__name__, self.size if hasattr(self, 'size') else '?')
+        return "{} (size={})".format(self.__class__.__name__, self.size)
 
     def print_tree(self, indent = 0):
         tulip.print_indented(self, indent)
+
+    def add_class(self, name):
+        self.classes.append(name)
+        self.invalidate()
+        return self
+
+    def remove_class(self, name):
+        self.classes.remove(name)
+        self.invalidate()
+        return self
 
     @property
     def resulting_classes(self):
         if not self.parent:
             return self.classes
         return self.classes + self.parent.resulting_classes
-
-    def add_class(self, name):
-        self.classes.append(name)
-        return self
-
-    def remove_class(self, name):
-        self.classes.remove(name)
-        return self
 
     @property
     def hidden(self):
@@ -46,9 +46,11 @@ class Widget(tulip.KeypressMixin):
 
     def hide(self):
         self.hidden = True
+        return self
 
     def show(self):
         self.hidden = False
+        return self
 
     @property
     def size(self):
@@ -70,12 +72,12 @@ class Widget(tulip.KeypressMixin):
 
     def render(self, screen, y, x, i, j, rows, cols):
         self.render_args = (screen, y, x, i, j, rows, cols)
-        self.before_render()
         if not self._hidden:
+            self.before_render()
             self.rendered_size = self._render(screen, y, x, i, j, rows, cols)
+            self.after_render()
         else:
             self.rendered_size = (0, 0)
-        self.after_render()
         return self.rendered_size
 
     def redraw(self):
@@ -88,14 +90,21 @@ class Widget(tulip.KeypressMixin):
     def _render(self, screen, y, x, i, j, rows, cols):
         raise NotImplementedError()
 
+    def sibling(self, d):
+        if self.parent:
+            s = self.index() + d
+            if s >= 0 and s < len(self.parent._children):
+                return self.parent._children[s]
+
     def _nlr_walk_range(self, d, l, r):
         w = self
         while w.parent != None:
             s = w.index() + d
             if s >= l(w.parent) and s <= r(w.parent):
                 return w.parent._children[s]
-            else:
-                w = w.parent
+            w = w.parent
+            if d < 0:
+                return w
         return None
 
     def _nlr_walk(self, d):
@@ -138,10 +147,17 @@ class Widget(tulip.KeypressMixin):
     def nlr_last_focusable(self):
         l = self.find_last_leaf()
         if not l:
-            return None # TODO Why this happens?
+            return None
         if l.focusable:
             return l
         return l.nlr_prev_focusable()
+
+    def lookup(self, cls):
+        if isinstance(self, cls):
+            return self
+        if self.parent:
+            return self.parent.lookup(cls)
+        raise RuntimeError("Required {} predecessor not found".format(cls))
 
     def focus(self):
         w = self
@@ -177,7 +193,7 @@ class Widget(tulip.KeypressMixin):
         return not self.parent or (self.parent.focused_child == self and self.parent.is_focused)
 
     def is_visible(self):
-        if not self.parent:
+        if not self.parent or not self.render_args:
             return True
         i = self.index()
         if i >= self.parent.visible_start and i < self.parent.visible_stop:
@@ -192,13 +208,6 @@ class Widget(tulip.KeypressMixin):
 
     def find_last_leaf(self):
         return self
-
-    def lookup(self, cls):
-        if isinstance(self, cls):
-            return self
-        if self.parent:
-            return self.parent.lookup(cls)
-        raise RuntimeError("Required {} predecessor not found".format(cls))
 
     def offset_to(self, p):
         w = self

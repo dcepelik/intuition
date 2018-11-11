@@ -261,7 +261,7 @@ class MessageView(tulip.VContainer):
         layout2 = tulip.ColumnLayout()
         layout2.add_cell(tulip.Cell())
         layout2.add_cell(tulip.Cell(weight=1))
-        self.ui_text = BodyView()
+        self.ui_text = BodyView().add_class('msg-text')
         layout2.add_child(tulip.Row([
             tulip.Box(0, 2 * self.indent),
             tulip.VContainer([
@@ -349,13 +349,6 @@ class ThreadList(tulip.ColumnLayout):
         f = self.find_focused_leaf()
         if f:
             f = f.nlr_prev_focusable()
-        if f:
-            f.focus()
-            self.redraw()
-            if not f.is_visible():
-                self.pager.prev_page()
-        else:
-            raise UIError("No messages above")
 
     def focus_first_msg(self):
         l = win.ui_pager.nlr_first_focusable()
@@ -423,7 +416,7 @@ class SoupWindow(tulip.RowLayout):
     def __init__(self):
         super().__init__()
         self.tabs = []
-        self.ui_pager = tulip.Pager([ui_threads])
+        self.ui_pager = tulip.Pager()
         self.ui_msgcount = tulip.Text().add_class('msgcount')
         self.ui_pgcount = tulip.Text().add_class('pgcount')
         self.ui_statusbar = tulip.ColumnLayout()
@@ -435,15 +428,12 @@ class SoupWindow(tulip.RowLayout):
             self.ui_pgcount,
             self.ui_msgcount,
         ]))
-        self.ui_exp = tulip.Pager([])
         self.ui_errlist = tulip.HContainer()
-        self.add_cell(tulip.Cell(weight=1))
         self.add_cell(tulip.Cell(weight=1))
         self.add_cell(tulip.Cell())
         self.add_cell(tulip.Cell())
         self.add_child(tulip.Column([
             self.ui_pager,
-            self.ui_exp,
             self.ui_statusbar,
             self.ui_errlist,
         ]))
@@ -471,9 +461,18 @@ query_ui = tulip.Text().add_class('query')
 
 win = SoupWindow()
 win.tabs.append(Tab(None, 'foo'))
-f = win.nlr_first_focusable()
-if f:
-    f.focus()
+
+def hook_set_active_widget(w):
+    win.ui_pager.clear_children()
+    win.ui_pager.add_child(w)
+    f = win.nlr_first_focusable()
+    if f:
+        f.focus()
+
+def hook_switch_main_window():
+    ui_threads.focus()
+    hook_set_active_widget(ui_threads)
+hook_switch_main_window()
 
 import sys, tty, termios
 
@@ -505,18 +504,41 @@ while True:
         if ch == 'q':
             break
         elif ch == 'j':
-            ui_threads.next_msg()
+            f = cur.nlr_next_focusable()
+            if f:
+                f.focus()
+                f.redraw()
+                print(f)
+                if not f.is_visible():
+                    win.ui_pager.next_page()
         elif ch == 'k':
-            ui_threads.prev_msg()
+            f = cur.nlr_prev_focusable()
+            if f:
+                f.focus()
+                f.redraw()
+                if not f.is_visible():
+                    win.ui_pager.prev_page()
+            else:
+                raise UIError("No messages above")
+        elif ch == 'h':
+            hook_switch_main_window()
         elif ch == 'g':
-            ui_threads.focus_first_msg()
+            f = win.nlr_first_focusable()
+            if f:
+                f.focus()
+                if not f.is_visible():
+                    win.ui_pager.scroll_to_widget(f)
         elif ch == 'G':
-            ui_threads.focus_last_msg()
+            f = win.nlr_last_focusable()
+            if f:
+                f.focus()
+                if not f.is_visible():
+                    win.ui_pager.scroll_to_widget(f)
         elif ch == 'z':
             win.ui_pager.scroll_to_widget(cur)
         elif ch == 'l':
-            win.ui_exp.clear_children()
-            win.ui_exp.add_child(MessageView(next(cur.toplevel_msgs())))
+            mv = MessageView(next(cur.toplevel_msgs()))
+            hook_set_active_widget(mv)
         elif ch == 'J':
             win.ui_pager.next_page()
             win.ui_pager.redraw()
@@ -535,8 +557,6 @@ while True:
                     v = v.nlr_next_visible()
                 if v:
                     v.focus()
-        elif ch == 'U':
-            win.ui_exp.next_page()
         elif ch == '@':
             pass
         elif ch == ' ':

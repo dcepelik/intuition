@@ -2,7 +2,7 @@ import tulip
 import math
 
 class Pager(tulip.VContainer):
-    def __init__(self, children):
+    def __init__(self, children=[]):
         super().__init__(children)
         self.vscroll = 0
 

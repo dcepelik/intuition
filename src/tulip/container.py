@@ -4,6 +4,8 @@ class Container(tulip.Widget):
     def __init__(self, children = []):
         super().__init__()
         self._children = []
+        self.visible_start = 0
+        self.visible_stop = 0
         for child in children:
             self.add_child(child)
 
@@ -26,8 +28,14 @@ class Container(tulip.Widget):
             child.print_tree(indent + 1)
 
     def _nlr_walk_range(self, d, l, r):
-        if self._children:
-            return self._children[l(self)] if d > 0 else self._children[r(self)]
+        if d > 0:
+            if self._children:
+                return self._children[l(self)]
+        elif self.parent:
+            s = self.index() + d
+            if s >= l(self.parent):
+                return self.parent._children[s].find_last_leaf()
+            return self.parent
 
     def find_focused_leaf(self):
         if self.focused_child:
@@ -37,12 +45,12 @@ class Container(tulip.Widget):
     def find_first_leaf(self):
         if self._children:
             return self._children[0].find_first_leaf()
-        return None
+        return self
 
     def find_last_leaf(self):
         if self._children:
             return self._children[-1].find_last_leaf()
-        return None
+        return self
 
     def invalidate(self):
         super().invalidate()

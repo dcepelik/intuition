@@ -15,12 +15,11 @@ class KeypressMixin:
         if key in self.key_handlers:
             handler, _ = self.key_handlers[key]
             return handler(self, key)
-        return key
+        return None
 
     def keypress(self, key):
         ret = self.handle_keypress(key)
-        print("Trying", self)
-        if ret:
+        if not ret:
             if self.parent:
                 self.parent.keypress(key)
             else:
