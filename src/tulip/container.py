@@ -19,16 +19,6 @@ class Container(tulip.Widget):
         self._children.clear()
         self.invalidate()
 
-    def _nlr_walk_range(self, d, l, r):
-        if d > 0:
-            if self._children:
-                return self._children[l(self)]
-        elif self.parent:
-            s = self.index() + d
-            if s >= l(self.parent):
-                return self.parent._children[s].last_leaf()
-            return self.parent
-
     def invalidate(self):
         super().invalidate()
         if self.parent:

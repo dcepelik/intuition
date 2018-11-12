@@ -127,11 +127,8 @@ class AnsiScreen(Screen):
         self.theme.set_class('authors', fg = Ansi256(ColorName.WHITE))
         self.theme.set_class('query', fg = Ansi256(ColorName.WHITE))
         self.theme.set_class('quote', fmt = AnsiFormat.BOLD)
-        #self.theme.set_class('msg-author', fmt = AnsiFormat.BOLD)
-        #self.theme.set_class('msg-author_addr', fg = Ansi256(ColorName.BLACK))
         self.theme.set_class('msg-header', fg = Ansi256(ColorName.BLACK), bg = Ansi256(85))
         self.theme.set_class('msg-headers', fg = Ansi256(ColorName.BLACK), bg = Ansi256(157))
-        #self.theme.set_class('header-name')
         self.clear()
 
     def clear(self):
@@ -182,24 +179,8 @@ class AnsiScreen(Screen):
             first = False
             xpos = 0
             for (x, _, text, attrs) in sorted(row, key=lambda x: (x[1], x[0])):
-                #if xpos != x:
-                #    AnsiScreen.advance(x - xpos)
-                #    xpos = x
                 AnsiScreen.write_cmd('[{}G'.format(1 + x))
                 self.set_attrs(*attrs)
                 AnsiScreen.write(text)
                 self.reset_attrs()
-                #xpos += len(text)
         AnsiScreen.write_cmd('[?25l')
-
-#scr = AnsiScreen(0, 0)
-#scr.set_attrs(Ansi256(ColorName.YELLOW), Ansi256(ColorName.DEFAULT), AnsiFormat.BOLD)
-#print("Hello World!")
-#scr.reset_attrs()
-#print("Hello again!")
-#
-#scr2 = AnsiScreen(3, 10)
-#scr2.put(0, 2, 'ahoj', ['red-text'])
-#scr2.put(0, 5, 'nazdar', [])
-#scr2.put(2, 7, 'zcau', ['red-text', 'focused'])
-#scr2.render()
