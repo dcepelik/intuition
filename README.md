@@ -4,11 +4,11 @@ Welcome to the home page of Tulip, the truly light-weight TUI library for Python
 
 ## ABOUT
 
-I'm sick and tired of *all* TUI frameworks for Python. My turn!
+I'm sick and tired of *all* TUI frameworks. My turn!
 
 ## FEATURES
 
-  - **Very new and thus not mature enough!**
+  - **Very new and thus not mature enough.**
   - Keep It Simple, Stupid!
   - Extremely compact (< 1k SLOC)
   - Reasonably efficient rendering of widgets
