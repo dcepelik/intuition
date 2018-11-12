@@ -6,25 +6,22 @@ class Widget(tulip.KeypressMixin):
     def __init__(self):
         super().__init__()
         self.parent = None
-        self.render_args = None
-        self.rendered_size = (0, 0)
         self._children = []
+        self._focused_child = None
         self.visible_start = 0 # recalc on clear children!
         self.visible_stop = 0
+        self.render_args = None
+        self.rendered_size = (0, 0)
         self.focusable = False
-        self.classes = []
+        self._classes = []
         self._size = None
-        self.focused_child = None
         self._hidden = False
-
-    def f(self):
-        return True
 
     def __repr__(self):
         return "{} (size={})".format(self.__class__.__name__, self.size)
 
     def _measure(self):
-        raise NotImlementedError()
+        raise NotImplementedError()
 
     def _render(self, screen, y, x, i, j, rows, cols):
         raise NotImplementedError()
@@ -35,20 +32,20 @@ class Widget(tulip.KeypressMixin):
             child.print_tree(indent + 1)
 
     def add_class(self, name):
-        self.classes.append(name)
+        self._classes.append(name)
         self.invalidate()
         return self
 
     def remove_class(self, name):
-        self.classes.remove(name)
+        self._classes.remove(name)
         self.invalidate()
         return self
 
     @property
     def resulting_classes(self):
         if not self.parent:
-            return self.classes
-        return self.classes + self.parent.resulting_classes
+            return self._classes
+        return self._classes + self.parent.resulting_classes
 
     @property
     def hidden(self):
@@ -75,27 +72,27 @@ class Widget(tulip.KeypressMixin):
     @property
     def size(self):
         if self._hidden:
-            return (0, 0)
-        if not self._size:
-            self.before_render() # TODO
+            self._size = (0, 0)
+        elif not self._size:
+            self.on_before_render() # TODO
             self._size = self._measure()
         return self._size
 
     def invalidate(self):
         self._size = None
 
-    def before_render(self):
+    def on_before_render(self):
         pass
 
-    def after_render(self):
+    def on_after_render(self):
         pass
 
     def render(self, screen, y, x, i, j, rows, cols):
         self.render_args = (screen, y, x, i, j, rows, cols)
         if not self._hidden:
-            self.before_render()
+            self.on_before_render()
             self.rendered_size = self._render(screen, y, x, i, j, rows, cols)
-            self.after_render()
+            self.on_after_render()
         else:
             self.rendered_size = (0, 0)
         return self.rendered_size
@@ -115,8 +112,8 @@ class Widget(tulip.KeypressMixin):
         return self
 
     def focused_leaf(self):
-        if self.focused_child:
-            return self.focused_child.focused_leaf()
+        if self._focused_child:
+            return self._focused_child.focused_leaf()
         return self
 
     @property
@@ -224,22 +221,22 @@ class Widget(tulip.KeypressMixin):
         lost_focus = []
         while w.parent:
             got_focus.append(w)
-            if w.parent.focused_child != w:
+            if w.parent._focused_child != w:
                 while got_focus:
                     got_focus.pop().on_got_focus()
                 lost_focus.clear()
-                s = w.parent.focused_child
+                s = w.parent._focused_child
                 while s:
                     lost_focus.append(s)
-                    s = s.focused_child
-                w.parent.focused_child = w
+                    s = s._focused_child
+                w.parent._focused_child = w
             w = w.parent
         while lost_focus:
             lost_focus.pop().on_lost_focus()
-        w = self.focused_child
+        w = self._focused_child
         while w:
             w.on_got_focus()
-            w = w.focused_child
+            w = w._focused_child
 
     def subtree(self):
         yield self
@@ -256,17 +253,17 @@ class Widget(tulip.KeypressMixin):
 
     def on_got_focus(self):
         self.add_class('focus-path')
-        if not self.focused_child and 'focused' not in self.classes:
+        if not self._focused_child and 'focused' not in self._classes:
             self.add_class('focused')
 
     def on_lost_focus(self):
         self.remove_class('focus-path')
-        if 'focused' in self.classes:
-            self.classes.remove('focused')
+        if 'focused' in self._classes:
+            self.remove_class('focused')
 
     @property
     def is_focused(self):
-        return not self.parent or (self.parent.focused_child == self and self.parent.is_focused)
+        return not self.parent or (self.parent._focused_child == self and self.parent.is_focused)
 
     def is_visible(self):
         if self.hidden_r:
@@ -295,7 +292,7 @@ class Widget(tulip.KeypressMixin):
             return self.parent.child_index(self)
         return None
 
-class Box(Widget):
+class Air(Widget):
     def __init__(self, rows, cols):
         super().__init__()
         self.rows = rows
@@ -307,6 +304,6 @@ class Box(Widget):
     def _measure(self):
         return (self.rows, self.cols)
 
-class Empty(Box):
+class Empty(Air):
     def __init__(self):
         super().__init__(0, 0)

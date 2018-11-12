@@ -166,7 +166,7 @@ class BodyView(tulip.VContainer):
             if not p:
                 continue
             if not first:
-                self.add_child(tulip.Box(1, 0))
+                self.add_child(tulip.Air(1, 0))
             q = None
             for l in p.split("\n"):
                 if not l:
@@ -214,18 +214,18 @@ class MessageView(tulip.VContainer):
         self.ui_author_addr = tulip.Text().add_class('msg-author_addr')
         self.ui_summary = tulip.HContainer([
             self.ui_author,
-            tulip.Box(0, 1),
+            tulip.Air(0, 1),
             self.ui_author_addr,
             self.ui_absdate,
-            tulip.Box(0, 1),
+            tulip.Air(0, 1),
             tulip.Text('('),
             self.ui_reldate,
             tulip.Text(') '),
         ])
         hdr_row = tulip.Row([
-            tulip.Box(0, 2 * self.indent),
+            tulip.Air(0, 2 * self.indent),
             tulip.Text('+'),
-            tulip.Box(0, 2),
+            tulip.Air(0, 2),
             self.ui_summary,
         ]).add_class('msg-header')
         hdr_row.focusable = True
@@ -251,13 +251,13 @@ class MessageView(tulip.VContainer):
         layout2.add_cell(tulip.Cell(weight=1))
         self.ui_text = BodyView().add_class('msg-text')
         layout2.add_child(tulip.Row([
-            tulip.Box(0, 2 * self.indent),
+            tulip.Air(0, 2 * self.indent),
             tulip.VContainer([
-                tulip.Box(1, 0),
+                tulip.Air(1, 0),
                 self.ui_text,
-                tulip.Box(1, 0),
+                tulip.Air(1, 0),
                 self.ui_att,
-                tulip.Box(1, 0),
+                tulip.Air(1, 0),
             ]),
         ]))
         self.ui_text_coll = Collapsible(layout2, tulip.Empty()).collapse()
@@ -289,7 +289,7 @@ class MessageView(tulip.VContainer):
         self.onkey("n", next_msg)
         self.onkey("p", prev_msg)
 
-    def before_render(self):
+    def on_before_render(self):
         mtime = os.path.getmtime(self.nm_msg.get_filename())
         if self.mtime == mtime:
             win.ui_cmd.text = "Reused"
@@ -308,7 +308,7 @@ class MessageView(tulip.VContainer):
                         continue
                     self.ui_headers.add_child(tulip.Row([
                         tulip.Text(h + ':').add_class('header-name'),
-                        tulip.Box(0, 1),
+                        tulip.Air(0, 1),
                         tulip.Text(msg[h]),
                     ]))
                 author = msg['from'].addresses[0]
@@ -375,13 +375,13 @@ class ThreadListItem(tulip.Row):
         self.ui_subj = tulip.Text().add_class('subject')
         self.ui_tags = tulip.Text().add_class('tags')
         self.add_child(self.ui_reldate)
-        self.add_child(tulip.Box(0, 1))
+        self.add_child(tulip.Air(0, 1))
         self.add_child(self.ui_authors)
         self.add_child(self.ui_total_lparen)
         self.add_child(self.ui_total)
         self.add_child(self.ui_total_rparen)
         self.add_child(self.ui_check)
-        self.add_child(tulip.HContainer([self.ui_subj, tulip.Box(0, 1), self.ui_tags]))
+        self.add_child(tulip.HContainer([self.ui_subj, tulip.Air(0, 1), self.ui_tags]))
 
         def show(w, c):
             if not self.mv:
@@ -406,7 +406,7 @@ class ThreadListItem(tulip.Row):
         else:
             self.thread_list.selection.remove(self)
 
-    def before_render(self):
+    def on_before_render(self):
         self.ui_reldate.text = hook_thread_date(self.nm_thread)
         self.ui_authors.text = hook_thread_authors(self.nm_thread)
         total = hook_thread_total_msgs(self.nm_thread)
@@ -446,7 +446,7 @@ class SoupWindow(tulip.RowLayout):
             self.ui_errlist,
         ]))
 
-    def before_render(self):
+    def on_before_render(self):
         self.ui_pgcount.text = 'Page {}/{}'.format(self.ui_pager.page(), self.ui_pager.num_pages())
         pass
 

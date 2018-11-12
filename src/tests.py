@@ -120,8 +120,8 @@ class ViewportTest(SoupUITestCase):
 
 class F(SoupUITestCase):
     def test_render(self):
-        h = HContainer([Box(10, 20)])
-        v = HContainer([Box(10, 20)])
+        h = HContainer([Air(10, 20)])
+        v = HContainer([Air(10, 20)])
         self.assertEqual(h.size, v.size)
 
 class ColumnLayoutTest(SoupUITestCase):
