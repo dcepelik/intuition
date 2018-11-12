@@ -65,7 +65,6 @@ class Color:
 
     def setbg(self):
         self._set(False)
-
 class Ansi256(Color):
     def __init__(self, n):
         self.n = n
@@ -116,6 +115,7 @@ class AnsiScreen(Screen):
         self.rows = None
         self.layer = 16 
         self.theme = Theme()
+        self.theme.set_class('focused', bg = Ansi256(ColorName.BLACK), fg = Ansi256(229), fmt = AnsiFormat.REVERSE)
         self.theme.set_class('error', fg = Ansi256(ColorName.RED), fmt = AnsiFormat.BOLD)
         self.theme.set_class('qgroup', fg = Ansi256(ColorName.YELLOW))
         self.theme.set_class('qgroup-2', fg = Ansi256(ColorName.RED))
@@ -126,13 +126,12 @@ class AnsiScreen(Screen):
         self.theme.set_class('msg-text', fg = Ansi256(ColorName.WHITE))
         self.theme.set_class('authors', fg = Ansi256(ColorName.WHITE))
         self.theme.set_class('query', fg = Ansi256(ColorName.WHITE))
+        self.theme.set_class('quote', fmt = AnsiFormat.BOLD)
         #self.theme.set_class('msg-author', fmt = AnsiFormat.BOLD)
         #self.theme.set_class('msg-author_addr', fg = Ansi256(ColorName.BLACK))
-        self.theme.set_class('quote', fg = Ansi256(ColorName.BLUE))
         self.theme.set_class('msg-header', fg = Ansi256(ColorName.BLACK), bg = Ansi256(85))
         self.theme.set_class('msg-headers', fg = Ansi256(ColorName.BLACK), bg = Ansi256(157))
         #self.theme.set_class('header-name')
-        self.theme.set_class('focused', fg = Ansi256(ColorName.BLACK), bg = Ansi256(85))
         self.clear()
 
     def clear(self):
@@ -176,7 +175,11 @@ class AnsiScreen(Screen):
 
     def render(self):
         #self.write("\033[H\033[J")
+        first = True
         for row in self.rows:
+            if not first:
+                AnsiScreen.write('\n')
+            first = False
             xpos = 0
             for (x, _, text, attrs) in sorted(row, key=lambda x: (x[1], x[0])):
                 #if xpos != x:
@@ -187,7 +190,7 @@ class AnsiScreen(Screen):
                 AnsiScreen.write(text)
                 self.reset_attrs()
                 #xpos += len(text)
-            AnsiScreen.write('\n')
+        AnsiScreen.write_cmd('[?25l')
 
 #scr = AnsiScreen(0, 0)
 #scr.set_attrs(Ansi256(ColorName.YELLOW), Ansi256(ColorName.DEFAULT), AnsiFormat.BOLD)

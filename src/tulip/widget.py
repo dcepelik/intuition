@@ -54,6 +54,10 @@ class Widget(tulip.KeypressMixin):
     def hidden(self):
         return self._hidden
 
+    @property
+    def hidden_r(self):
+        return self._hidden if not self.parent else self._hidden or self.parent.hidden_r
+
     @hidden.setter
     def hidden(self, h):
         if self._hidden != h:
@@ -117,7 +121,8 @@ class Widget(tulip.KeypressMixin):
 
     @property
     def visible_children(self):
-        return self._children[self.visible_start:self.visible_stop]
+        v = self._children[self.visible_start:self.visible_stop]
+        return list(filter(lambda w: not w.hidden, v))
 
     def last_visible(self):
         return self.visible_children[-1] if self.visible_children else self
@@ -130,9 +135,16 @@ class Widget(tulip.KeypressMixin):
 
     def visible_sibling(self, d):
         if self.parent:
-            s = self.index() + d
-            if s >= self.parent.visible_start and s < self.parent.visible_stop:
-                return self.parent._children[s]
+            idx = self.index()
+            while True:
+                idx += d
+                if idx < self.parent.visible_start or idx >= self.parent.visible_stop:
+                    break
+                s = self.parent._children[idx]
+                if not s:
+                    break
+                if not s.hidden:
+                    return s
 
     def next(self):
         if self._children:
@@ -224,10 +236,27 @@ class Widget(tulip.KeypressMixin):
             w = w.parent
         while lost_focus:
             lost_focus.pop().on_lost_focus()
+        w = self.focused_child
+        while w:
+            w.on_got_focus()
+            w = w.focused_child
+
+    def subtree(self):
+        yield self
+        for c in self._children:
+            yield from c.subtree()
+
+    def srch(self, cls, once_per_subtree=False):
+        if isinstance(self, cls):
+            yield self
+            if once_per_subtree:
+                return
+        for w in self._children:
+            yield from w.srch(cls, once_per_subtree)
 
     def on_got_focus(self):
         self.add_class('focus-path')
-        if not self.focused_child:
+        if not self.focused_child and 'focused' not in self.classes:
             self.add_class('focused')
 
     def on_lost_focus(self):
@@ -240,11 +269,15 @@ class Widget(tulip.KeypressMixin):
         return not self.parent or (self.parent.focused_child == self and self.parent.is_focused)
 
     def is_visible(self):
-        if not self.parent or not self.render_args:
+        if self.hidden_r:
+            return False
+        if not self.render_args:
+            return False
+        if not self.parent:
             return True
         i = self.index()
         if i >= self.parent.visible_start and i < self.parent.visible_stop:
-            return True
+            return self.parent.is_visible() if self.parent else True
         return False
 
     def offset_to(self, p):

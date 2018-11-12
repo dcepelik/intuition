@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import pdb
+import os
 import tulip
 import re
 import string
@@ -13,7 +14,7 @@ import email.parser
 import email.policy
 
 cols, rows = shutil.get_terminal_size()
-screen = tulip.AnsiScreen(rows - 1, cols)
+screen = tulip.AnsiScreen(rows, cols)
 
 def hook_check_mark():
     return "\u2022"
@@ -103,27 +104,6 @@ def hook_charname(c):
 class UIError(Exception):
     pass
 
-#def hook_is_quote_intro(line, addrs):
-#    def ends_with_colon():
-#        return l[-1] == ':'
-#    def contains_keywords():
-#        keywords = {"quoting", "wrote", "napsal(a)"}
-#        for w in l.split(' '):
-#            if w.lower() in keywords:
-#                return True
-#        return False
-#    def mentions_author_address():
-#        for a in addrs:
-#            if a in line:
-#                return True
-#        return False
-#    tests = [ends_with_colon, contains_keywords, mentions_author_address]
-#    score = 0
-#    for t in tests:
-#        if t():
-#            score += 1
-#    return score >= 2
-
 class Collapsible(tulip.VContainer):
     def __init__(self, a, b):
         super().__init__([a, b])
@@ -131,7 +111,7 @@ class Collapsible(tulip.VContainer):
         self.b = b
         self.collapsed = None
         self.expand()
-        self.onkey("\r", lambda c, w: self.toggle())
+        self.onkey("l", lambda c, w: self.toggle())
 
     def collapse(self):
         self.a.hide()
@@ -151,6 +131,24 @@ class Collapsible(tulip.VContainer):
         else:
             self.collapse()
         return self
+
+class Switcher(tulip.VContainer):
+    def __init__(self, children = []):
+        super().__init__(children)
+        self.active = None
+
+    def add_child(self, w):
+        super().add_child(w)
+        if not self.active:
+            self.active = w
+        else:
+            w.hide()
+
+    def switch_to(self, w):
+        if self.active:
+            self.active.hide()
+        w.focus()
+        self.active = w.show()
 
 class BodyView(tulip.VContainer):
     def __init__(self, text=''):
@@ -181,7 +179,7 @@ class BodyView(tulip.VContainer):
                         c.focusable = True
                         self.add_child(c)
                     q.add_child(tulip.Paragraph(l))
-                    cover.text = '- {} quoted lines'.format(len(q._children))
+                    cover.text = '-- {} quoted line(s) --'.format(len(q._children))
                 else:
                     q = None
                     self.add_child(tulip.Paragraph(l))
@@ -197,28 +195,12 @@ class BodyView(tulip.VContainer):
             self._text = t
             self.do()
 
-#class ThreadsW:
-#    def __init__(self, nm_threads):
-#        self.nm_threads = nm_threads
-#        self._threads = None
-#
-#    def threads():
-#        if not self._threads:
-#            self._threads = [ThreadW(t) for t in self._nm_threads]
-#        return self._threads
-#
-#class ThreadW:
-#    def __init__(self, nm_thread):
-#        self.nm_thread = nm_thread
-#        self.
-
-
-
 class MessageView(tulip.VContainer):
     def __init__(self, nm_msg, indent=0):
         super().__init__()
         self.nm_msg = nm_msg
         self.indent = indent
+        self.mtime = None
 
         layout = tulip.ColumnLayout()
         layout.add_cell(tulip.Cell())
@@ -240,23 +222,29 @@ class MessageView(tulip.VContainer):
             self.ui_reldate,
             tulip.Text(') '),
         ])
-        layout.add_child(tulip.Row([
+        hdr_row = tulip.Row([
             tulip.Box(0, 2 * self.indent),
             tulip.Text('+'),
-            tulip.Box(0, 1),
+            tulip.Box(0, 2),
             self.ui_summary,
-        ]).add_class('msg-header'))
+        ]).add_class('msg-header')
+        hdr_row.focusable = True
+        layout.add_child(hdr_row)
 
         self.ui_headers = tulip.ColumnLayout()
         self.ui_headers.add_cell(tulip.Cell())
         self.ui_headers.add_cell(tulip.Cell())
         self.ui_headers.add_cell(tulip.Cell(weight=1))
-        layout.add_child(tulip.Row([
+        headers_row = tulip.Row([
             tulip.Empty(),
             tulip.Empty(),
             tulip.Empty(),
             self.ui_headers,
-        ]).add_class('msg-headers'))
+        ]).add_class('msg-headers')
+        self.ui_hdr_coll = Collapsible(headers_row, tulip.Empty()).collapse()
+        layout.add_child(self.ui_hdr_coll)
+
+        self.ui_att = tulip.VContainer()
 
         layout2 = tulip.ColumnLayout()
         layout2.add_cell(tulip.Cell())
@@ -268,18 +256,46 @@ class MessageView(tulip.VContainer):
                 tulip.Box(1, 0),
                 self.ui_text,
                 tulip.Box(1, 0),
+                self.ui_att,
+                tulip.Box(1, 0),
             ]),
         ]))
+        self.ui_text_coll = Collapsible(layout2, tulip.Empty()).collapse()
 
         self.ui_replies = tulip.VContainer()
         for r in self.nm_msg.get_replies():
             self.ui_replies.add_child(MessageView(r, self.indent + 1))
 
         self.add_child(layout)
-        self.add_child(layout2)
+        self.add_child(self.ui_text_coll)
         self.add_child(self.ui_replies)
 
+        def next_msg(w, c):
+            m = w.next_p(lambda u: isinstance(u, MessageView))
+            if m:
+                m.first_focusable().focus()
+                return True
+            raise UIError("No next message")
+
+        def prev_msg(w, c):
+            m = w.prev_p(lambda u: isinstance(u, MessageView))
+            if m:
+                m.first_focusable().focus()
+                return True
+            raise UIError("No previous message")
+
+        self.onkey("l", lambda w, c: w.ui_text_coll.toggle())
+        self.onkey("H", lambda w, c: w.ui_hdr_coll.toggle())
+        self.onkey("n", next_msg)
+        self.onkey("p", prev_msg)
+
     def before_render(self):
+        mtime = os.path.getmtime(self.nm_msg.get_filename())
+        if self.mtime == mtime:
+            win.ui_cmd.text = "Reused"
+            return
+        self.mtime = mtime
+
         unix = self.nm_msg.get_date()
         self.ui_absdate.text = hook_absdate(unix)
         self.ui_reldate.text = hook_ago(unix, short=False)
@@ -300,9 +316,18 @@ class MessageView(tulip.VContainer):
                 self.ui_author_addr.text = '<{}@{}> '.format(author.username, author.domain)
                 self.ui_author_addr.hide()
                 for part in msg.walk():
+                    if part.get_content_maintype() == 'multipart':
+                        continue
                     if part.get_content_type() == 'text/plain':
-                        self.ui_text.text = part.get_payload(decode=True).decode(part.get_content_charset() or 'utf-8')
-                        break
+                        self.ui_text.text += part.get_payload(decode=True).decode(part.get_content_charset() or 'utf-8')
+                    else:
+                        ui_att = tulip.Text(
+                            "-- Attachment: {} --".format(part.get_filename())
+                        ).add_class('quote')
+                        ui_att.focusable = True
+                        self.ui_att.add_child(ui_att)
+                if not self.ui_text.text:
+                    self.ui_text.text = 'HTML bullcrap'
         except UnicodeDecodeError:
             pass
 
@@ -333,41 +358,14 @@ class ThreadList(tulip.ColumnLayout):
     def pager(self):
         return self.lookup(tulip.Pager)
 
-    def next_msg(self):
-        f = self.focused_leaf()
-        if f:
-            f = cur.next_focusable()
-        if f:
-            f.focus()
-            self.redraw()
-            if not f.is_visible():
-                self.pager.next_page()
-        else:
-            raise UIError("No messages below")
-
-    def prev_msg(self):
-        f = self.focused_leaf()
-        if f:
-            f = f.prev_focusable()
-
-    def focus_first_msg(self):
-        l = win.ui_pager.first_focusable()
-        if l:
-            l.focus()
-            win.ui_pager.scroll_to_widget(l)
-
-    def focus_last_msg(self):
-        l = win.ui_pager.last_focusable()
-        if l:
-            l.focus()
-            win.ui_pager.scroll_to_widget(l)
-
 class ThreadListItem(tulip.Row):
     def __init__(self, nm_thread):
         super().__init__()
         self.nm_thread = nm_thread
         self.focusable = True
         self.selected = False
+        self.mv = None
+
         self.ui_reldate = tulip.Text().add_class('date')
         self.ui_authors = tulip.Text().add_class('authors')
         self.ui_total_lparen = tulip.Text(' (')
@@ -384,6 +382,14 @@ class ThreadListItem(tulip.Row):
         self.add_child(self.ui_total_rparen)
         self.add_child(self.ui_check)
         self.add_child(tulip.HContainer([self.ui_subj, tulip.Box(0, 1), self.ui_tags]))
+
+        def show(w, c):
+            if not self.mv:
+                self.mv = MessageView(next(self.toplevel_msgs()))
+            hook_set_active_widget(self.mv)
+            return True
+
+        self.onkey('l', show)
 
     def toplevel_msgs(self):
         self.tlc = self.nm_thread.get_toplevel_messages()
@@ -416,7 +422,9 @@ class SoupWindow(tulip.RowLayout):
     def __init__(self):
         super().__init__()
         self.tabs = []
-        self.ui_pager = tulip.Pager()
+        self.ui_cmd = tulip.Text()
+        self.ui_switcher = Switcher()
+        self.ui_pager = tulip.Pager([self.ui_switcher])
         self.ui_msgcount = tulip.Text().add_class('msgcount')
         self.ui_pgcount = tulip.Text().add_class('pgcount')
         self.ui_statusbar = tulip.ColumnLayout()
@@ -424,7 +432,7 @@ class SoupWindow(tulip.RowLayout):
         self.ui_statusbar.add_cell(tulip.Cell(weight=1, halign=tulip.HAlign.CENTER))
         self.ui_statusbar.add_cell(tulip.Cell(weight=1, halign=tulip.HAlign.RIGHT))
         self.ui_statusbar.add_child(tulip.Row([
-            tulip.Text(':reply-all'),
+            self.ui_cmd,
             self.ui_pgcount,
             self.ui_msgcount,
         ]))
@@ -440,12 +448,12 @@ class SoupWindow(tulip.RowLayout):
 
     def before_render(self):
         self.ui_pgcount.text = 'Page {}/{}'.format(self.ui_pager.page(), self.ui_pager.num_pages())
-
-    def after_render(self):
-        self.ui_errlist.clear_children()
+        pass
 
     def add_error(self, msg):
         self.ui_errlist.add_child(tulip.Text("E: {}".format(msg)).add_class('error'))
+        self.ui_errlist.show()
+        self.ui_statusbar.hide()
 
 class Tab(tulip.VContainer):
     def __init__(self, widget, title):
@@ -463,14 +471,16 @@ win = SoupWindow()
 win.tabs.append(Tab(None, 'foo'))
 
 def hook_set_active_widget(w):
-    win.ui_pager.clear_children()
-    win.ui_pager.add_child(w)
-    f = win.first_focusable()
-    if f:
-        f.focus()
+    if w not in win.ui_switcher._children:
+        win.ui_switcher.add_child(w)
+    if w.focused_leaf() == w:
+        f = w.first_focusable()
+        if f:
+            f.focus()
+    win.ui_switcher.switch_to(w)
 
 def hook_switch_main_window():
-    ui_threads.focus()
+    #ui_threads.focus()
     hook_set_active_widget(ui_threads)
 hook_switch_main_window()
 
@@ -488,40 +498,44 @@ def read_char():
 
 while True:
     try:
-        cur = win.focused_leaf()
-        if cur:
-            if ui_threads.selection:
-                win.ui_msgcount.text = 'Msg {}/{} ({}{})'.format(1 + cur.index(), len(ui_threads._children), len(ui_threads.selection), hook_check_mark())
-            else:
-                win.ui_msgcount.text = 'Msg {}/{}'.format(1 + cur.index(), len(ui_threads._children))
-        screen.clear()
-        def render():
-            win.render(screen, 0, 0, 0, 0, screen.nrows, screen.ncols)
-        render()
-        if cur and not cur.is_visible():
+        win.render(screen, 0, 0, 0, 0, screen.nrows, screen.ncols)
+
+        focused = win.focused_leaf()
+        if focused and not focused.is_visible():
             v = win.ui_pager.next_visible_p(tulip.focusable_p)
             if v:
                 v.focus()
+            focused = v
+
+        if focused:
+            win.ui_msgcount.text = 'Msg {}/{}'.format(1 + focused.index(), len(ui_threads._children))
+            if ui_threads.selection:
+                win.ui_msgcount.text += ' ({}{})'.format(len(ui_threads.selection), hook_check_mark())
+
+        screen.clear()
+        win.render(screen, 0, 0, 0, 0, screen.nrows, screen.ncols)
         screen.render()
+        win.ui_errlist.clear_children()
+        win.ui_errlist.hide()
+        win.ui_statusbar.show()
+
         ch = read_char()
         if ch == 'q':
             break
         elif ch == 'j':
-            f = cur.next_focusable()
+            f = focused.next_p(lambda w: w.focusable and not w.hidden_r)
             if f:
                 f.focus()
-                f.redraw()
                 if not f.is_visible():
-                    win.ui_pager.next_page()
+                    win.ui_pager.scroll_to_widget(f)
             else:
                 raise UIError("No messages below")
         elif ch == 'k':
-            f = cur.prev_focusable()
+            f = focused.prev_p(lambda w: w.focusable and not w.hidden_r)
             if f:
                 f.focus()
-                f.redraw()
                 if not f.is_visible():
-                    win.ui_pager.prev_page()
+                    win.ui_pager.scroll_to_widget(f)
             else:
                 raise UIError("No messages above")
         elif ch == 'h':
@@ -539,10 +553,7 @@ while True:
                 if not f.is_visible():
                     win.ui_pager.scroll_to_widget(f)
         elif ch == 'z':
-            win.ui_pager.scroll_to_widget(cur)
-        elif ch == 'l':
-            mv = MessageView(next(cur.toplevel_msgs()))
-            hook_set_active_widget(mv)
+            win.ui_pager.scroll_to_widget(focused)
         elif ch == 'J':
             win.ui_pager.next_page()
         elif ch == 'K':
@@ -550,15 +561,24 @@ while True:
         elif ch == '@':
             pass
         elif ch == ' ':
-            cur.toggle_selected()
-            ui_threads.next_msg()
+            focused.toggle_selected()
+            f = focused.next_p(lambda w: w.focusable and not w.hidden_r)
+            if f:
+                f.focus()
+                if not f.is_visible():
+                    win.ui_pager.scroll_to_widget(f)
+        elif ch == 'C':
+            for w in win.srch(MessageView):
+                w.ui_text_coll.toggle()
         elif ch == 'v':
             for t in ui_threads._children:
                 t.toggle_selected()
         else:
-            cur.keypress(ch)
+            if focused:
+                focused.keypress(ch)
     except UIError as e:
         win.add_error(e)
+        pass
     except tulip.UnhandledKeyError:
         win.add_error("Key {} not bound".format(hook_charname(ch)))
             #win.add_error("Key {} not bound".format(hook_charname(ch)))

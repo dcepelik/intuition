@@ -110,7 +110,7 @@ class Layout:
         sum_a = 0
         sum_a2 = 0
         cell_size = [0] * len(self.cells)
-        for cell_group in self._children:
+        for cell_group in self.srch(CellGroup, True):
             sum_a += cell_group.size[a]
             if sum_a < skip:
                 continue
@@ -140,7 +140,7 @@ class Layout:
             for cell in self.cells:
                 cell_size = [cell.height, cell.width]
                 if cell.weight > 0:
-                    cell_size[b] += int(avail_size * (float(cell.weight) / sum_weight))
+                    cell_size[b] += int(avail_size * (cell.weight / sum_weight))
                     cell.height = cell_size[0]
                     cell.width = cell_size[1]
 
