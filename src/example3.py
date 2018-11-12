@@ -334,9 +334,9 @@ class ThreadList(tulip.ColumnLayout):
         return self.lookup(tulip.Pager)
 
     def next_msg(self):
-        f = self.find_focused_leaf()
+        f = self.focused_leaf()
         if f:
-            f = cur.nlr_next_focusable()
+            f = cur.next_focusable()
         if f:
             f.focus()
             self.redraw()
@@ -346,18 +346,18 @@ class ThreadList(tulip.ColumnLayout):
             raise UIError("No messages below")
 
     def prev_msg(self):
-        f = self.find_focused_leaf()
+        f = self.focused_leaf()
         if f:
-            f = f.nlr_prev_focusable()
+            f = f.prev_focusable()
 
     def focus_first_msg(self):
-        l = win.ui_pager.nlr_first_focusable()
+        l = win.ui_pager.first_focusable()
         if l:
             l.focus()
             win.ui_pager.scroll_to_widget(l)
 
     def focus_last_msg(self):
-        l = win.ui_pager.nlr_last_focusable()
+        l = win.ui_pager.last_focusable()
         if l:
             l.focus()
             win.ui_pager.scroll_to_widget(l)
@@ -465,7 +465,7 @@ win.tabs.append(Tab(None, 'foo'))
 def hook_set_active_widget(w):
     win.ui_pager.clear_children()
     win.ui_pager.add_child(w)
-    f = win.nlr_first_focusable()
+    f = win.first_focusable()
     if f:
         f.focus()
 
@@ -488,8 +488,7 @@ def read_char():
 
 while True:
     try:
-        cur = win.find_focused_leaf()
-        query_ui.text = query
+        cur = win.focused_leaf()
         if cur:
             if ui_threads.selection:
                 win.ui_msgcount.text = 'Msg {}/{} ({}{})'.format(1 + cur.index(), len(ui_threads._children), len(ui_threads.selection), hook_check_mark())
@@ -499,20 +498,25 @@ while True:
         def render():
             win.render(screen, 0, 0, 0, 0, screen.nrows, screen.ncols)
         render()
+        if cur and not cur.is_visible():
+            v = win.ui_pager.next_visible_p(tulip.focusable_p)
+            if v:
+                v.focus()
         screen.render()
         ch = read_char()
         if ch == 'q':
             break
         elif ch == 'j':
-            f = cur.nlr_next_focusable()
+            f = cur.next_focusable()
             if f:
                 f.focus()
                 f.redraw()
-                print(f)
                 if not f.is_visible():
                     win.ui_pager.next_page()
+            else:
+                raise UIError("No messages below")
         elif ch == 'k':
-            f = cur.nlr_prev_focusable()
+            f = cur.prev_focusable()
             if f:
                 f.focus()
                 f.redraw()
@@ -523,13 +527,13 @@ while True:
         elif ch == 'h':
             hook_switch_main_window()
         elif ch == 'g':
-            f = win.nlr_first_focusable()
+            f = win.first_focusable()
             if f:
                 f.focus()
                 if not f.is_visible():
                     win.ui_pager.scroll_to_widget(f)
         elif ch == 'G':
-            f = win.nlr_last_focusable()
+            f = win.last_focusable()
             if f:
                 f.focus()
                 if not f.is_visible():
@@ -541,22 +545,8 @@ while True:
             hook_set_active_widget(mv)
         elif ch == 'J':
             win.ui_pager.next_page()
-            win.ui_pager.redraw()
-            if cur and not cur.is_visible():
-                v = win.ui_pager.nlr_next_visible()
-                while v and not v.focusable: # TODO idiomatically
-                    v = v.nlr_next_visible()
-                if v:
-                    v.focus()
         elif ch == 'K':
             win.ui_pager.prev_page()
-            win.ui_pager.redraw()
-            if cur and not cur.is_visible():
-                v = win.ui_pager.nlr_next_visible()
-                while v and not v.focusable:
-                    v = v.nlr_next_visible()
-                if v:
-                    v.focus()
         elif ch == '@':
             pass
         elif ch == ' ':

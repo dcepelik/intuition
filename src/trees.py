@@ -3,6 +3,7 @@ import tulip
 
 c1 = tulip.Text('C1')
 c1.focusable = True
+e = tulip.Text('E')
 
 screen = tulip.MockScreen(1, 2)
 
@@ -15,18 +16,18 @@ hc = tulip.HContainer([
         tulip.Text('C3'),
     ]),
     tulip.Text('D'),
-    tulip.Text('E'),
+    e,
 ])
 hc.focusable = True
 
-def preorder_walk(w):
-    while w:
-        yield w
-        w = w._nlr_walk(1)
-
-hc.render(screen, 0, 0, 0, 1, screen.nrows, screen.ncols)
-print(screen)
-print(hc.last_render_l)
-print(hc.last_render_r)
-for c in preorder_walk(hc):
-    print(c)
+for w in hc.descendants():
+    print(w)
+print("--")
+for w in c1.predecessors():
+    print(w)
+print("--")
+for w in e.predecessors():
+    print(w)
+print("--")
+print(c1.next_p(lambda w: True))
+print(tulip.Widget.f(c1))

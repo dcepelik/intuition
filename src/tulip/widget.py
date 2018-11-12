@@ -1,22 +1,38 @@
 import tulip
 
+focusable_p = lambda w: w.focusable
+
 class Widget(tulip.KeypressMixin):
     def __init__(self):
         super().__init__()
         self.parent = None
         self.render_args = None
         self.rendered_size = (0, 0)
+        self._children = []
+        self.visible_start = 0 # recalc on clear children!
+        self.visible_stop = 0
         self.focusable = False
         self.classes = []
         self._size = None
         self.focused_child = None
         self._hidden = False
 
+    def f(self):
+        return True
+
     def __repr__(self):
         return "{} (size={})".format(self.__class__.__name__, self.size)
 
+    def _measure(self):
+        raise NotImlementedError()
+
+    def _render(self, screen, y, x, i, j, rows, cols):
+        raise NotImplementedError()
+
     def print_tree(self, indent = 0):
         tulip.print_indented(self, indent)
+        for child in self._children:
+            child.print_tree(indent + 1)
 
     def add_class(self, name):
         self.classes.append(name)
@@ -44,12 +60,12 @@ class Widget(tulip.KeypressMixin):
             self._hidden = h
             self.invalidate()
 
-    def hide(self):
-        self.hidden = True
-        return self
-
     def show(self):
         self.hidden = False
+        return self
+
+    def hide(self):
+        self.hidden = True
         return self
 
     @property
@@ -84,11 +100,27 @@ class Widget(tulip.KeypressMixin):
         if self.render_args:
             return self.render(*self.render_args)
 
-    def _measure(self):
-        raise NotImlementedError()
+    def first_leaf(self):
+        if self._children:
+            return self._children[0].first_leaf()
+        return self
 
-    def _render(self, screen, y, x, i, j, rows, cols):
-        raise NotImplementedError()
+    def last_leaf(self):
+        if self._children:
+            return self._children[-1].last_leaf()
+        return self
+
+    def focused_leaf(self):
+        if self.focused_child:
+            return self.focused_child.focused_leaf()
+        return self
+
+    @property
+    def visible_children(self):
+        return self._children[self.visible_start:self.visible_stop]
+
+    def last_visible(self):
+        return self.visible_children[-1] if self.visible_children else self
 
     def sibling(self, d):
         if self.parent:
@@ -96,61 +128,76 @@ class Widget(tulip.KeypressMixin):
             if s >= 0 and s < len(self.parent._children):
                 return self.parent._children[s]
 
-    def _nlr_walk_range(self, d, l, r):
+    def visible_sibling(self, d):
+        if self.parent:
+            s = self.index() + d
+            if s >= self.parent.visible_start and s < self.parent.visible_stop:
+                return self.parent._children[s]
+
+    def next(self):
+        if self._children:
+            return self._children[0]
         w = self
-        while w.parent != None:
-            s = w.index() + d
-            if s >= l(w.parent) and s <= r(w.parent):
-                return w.parent._children[s]
+        while w:
+            s = w.sibling(1)
+            if s:
+                return s
             w = w.parent
-            if d < 0:
-                return w
-        return None
 
-    def _nlr_walk(self, d):
-        return self._nlr_walk_range(d, lambda w: 0, lambda w: len(w._children) - 1)
-
-    def _nlr_walk_visible(self, d):
-        return self._nlr_walk_range(d, lambda w: w.visible_start, lambda w: w.visible_stop - 1)
-
-    def _nlr_walk_focusable(self, d):
+    def next_visible(self):
+        if self.visible_children:
+            return self.visible_children[0]
         w = self
-        while True:
-            w = w._nlr_walk(d)
-            if not w or w.focusable:
-                break
-        return w
+        while w:
+            s = w.visible_sibling(1)
+            if s:
+                return s
+            w = w.parent
 
-    def nlr_next(self):
-        return self._nlr_walk(1)
+    def prev(self):
+        s = self.sibling(-1)
+        if s:
+            return s.last_leaf()
+        return self.parent
 
-    def nlr_next_visible(self):
-        return self._nlr_walk_visible(1)
+    def prev_visible(self):
+        s = self.visible_sibling(-1)
+        if s:
+            return s.last_visible()
+        return self.parent
 
-    def nlr_prev(self):
-        return self._nlr_walk(-1)
+    def _make_walk_p(f):
+        def g(self, p):
+            w = self
+            while w:
+                w = f(w)
+                if w and p(w):
+                    return w
+        return g
 
-    def nlr_prev_visible(self):
-        return self._nlr_walk_visible(-1)
+    next_p = _make_walk_p(next)
+    prev_p = _make_walk_p(prev)
+    next_visible_p = _make_walk_p(next_visible)
+    prev_visible_p = _make_walk_p(prev_visible)
 
-    def nlr_next_focusable(self):
-        return self._nlr_walk_focusable(1)
+    def next_focusable(self):
+        return self.next_p(focusable_p)
 
-    def nlr_prev_focusable(self):
-        return self._nlr_walk_focusable(-1)
+    def prev_focusable(self):
+        return self.prev_p(focusable_p)
 
-    def nlr_first_focusable(self):
+    def first_focusable(self):
         if self.focusable:
             return self
-        return self.nlr_next_focusable()
+        return self.next_focusable()
 
-    def nlr_last_focusable(self):
-        l = self.find_last_leaf()
+    def last_focusable(self):
+        l = self.last_leaf()
         if not l:
             return None
         if l.focusable:
             return l
-        return l.nlr_prev_focusable()
+        return l.prev_focusable()
 
     def lookup(self, cls):
         if isinstance(self, cls):
@@ -199,15 +246,6 @@ class Widget(tulip.KeypressMixin):
         if i >= self.parent.visible_start and i < self.parent.visible_stop:
             return True
         return False
-
-    def find_focused_leaf(self):
-        return self
-
-    def find_first_leaf(self):
-        return self
-
-    def find_last_leaf(self):
-        return self
 
     def offset_to(self, p):
         w = self

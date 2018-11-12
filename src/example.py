@@ -87,7 +87,7 @@ def read_char():
         termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
     return ch
 
-window.find_first_leaf().focus()
+window.first_leaf().focus()
 
 while True:
     #sys.stdout.write("\033[H\033[J")
@@ -99,7 +99,7 @@ while True:
     #print("Focused:")
     #for i, tl in enumerate(threads._children):
     #    print("#{}: {}".format(i, tl.visible))
-    #window.find_focused_leaf().print_tree(1)
+    #window.focused_leaf().print_tree(1)
     ch = read_char()
     if ch == 'q':
         break
@@ -108,10 +108,10 @@ while True:
     elif ch == 'K':
         pager.prev_page()
     elif ch == 'j':
-        foc_succ = window.find_focused_leaf().find_focusable_successor()
+        foc_succ = window.focused_leaf().find_focusable_successor()
         if foc_succ:
             foc_succ.focus()
         else:
-            window.find_first_leaf().focus()
+            window.first_leaf().focus()
     else:
-        window.find_focused_leaf().keypress(ch)
+        window.focused_leaf().keypress(ch)
