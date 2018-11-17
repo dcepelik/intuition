@@ -153,6 +153,12 @@ class Widget(tulip.KeypressMixin):
                 return s
             w = w.parent
 
+    def prev(self):
+        s = self.sibling(-1)
+        if s:
+            return s.last_leaf()
+        return self.parent
+
     def next_visible(self):
         if self.visible_children:
             return self.visible_children[0]
@@ -162,12 +168,6 @@ class Widget(tulip.KeypressMixin):
             if s:
                 return s
             w = w.parent
-
-    def prev(self):
-        s = self.sibling(-1)
-        if s:
-            return s.last_leaf()
-        return self.parent
 
     def prev_visible(self):
         s = self.visible_sibling(-1)
